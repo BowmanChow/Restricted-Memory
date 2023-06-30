@@ -1,7 +1,7 @@
 exp="aotplus"
 # exp="debug"
-gpu_num="4"
-devices="4,5,6,7"
+gpu_num="1"
+devices="4"
 
 # model="aott"
 # model="aots"
