@@ -20,4 +20,4 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 dataset="vost"
 split="val"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --exp_name ${exp} --stage ${stage} --model ${model} \
-	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0 1.1 1.2 0.9 0.8
+	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0
