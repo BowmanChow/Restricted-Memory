@@ -15,7 +15,9 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 	--exp_name ${exp} \
 	--stage ${stage} \
 	--model ${model} \
-	--gpu_num ${gpu_num}
+	--gpu_num ${gpu_num} \
+	--batch_size 2 \
+	# --log ./debug_logs
 
 dataset="vost"
 split="val"
