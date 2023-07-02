@@ -98,6 +98,7 @@ class Trainer(object):
         self.print_log('Build VOS model.')
 
         self.model = build_vos_model(cfg.MODEL_VOS, cfg).cuda(self.gpu)
+        print(f"Build model {type(self.model).__name__} completed")
         self.model_encoder = self.model.encoder
         self.engine = build_engine(
             cfg.MODEL_ENGINE,
@@ -107,10 +108,12 @@ class Trainer(object):
             long_term_mem_gap=cfg.TRAIN_LONG_TERM_MEM_GAP)
 
         if cfg.MODEL_FREEZE_BACKBONE:
+            print(f"Freeze Model Encoder !")
             for param in self.model_encoder.parameters():
                 param.requires_grad = False
 
         if cfg.DIST_ENABLE:
+            print(f"Enable Dist !")
             dist.init_process_group(backend=cfg.DIST_BACKEND,
                                     init_method=cfg.DIST_URL,
                                     world_size=cfg.TRAIN_GPUS,
@@ -173,17 +176,21 @@ class Trainer(object):
             self.optimizer = optim.AdamW(trainable_params,
                                          lr=cfg.TRAIN_LR,
                                          weight_decay=cfg.TRAIN_WEIGHT_DECAY)
+        print(f"Use optimizer {type(self.optimizer).__name__} ")
 
         self.enable_amp = enable_amp
         if enable_amp:
+            print(f"Enable amp ! ")
             self.scaler = torch.cuda.amp.GradScaler()
         else:
             self.scaler = None
+        print(f"trainer.scaler = {type(self.scaler).__name__}")
 
         self.prepare_dataset()
         self.process_pretrained_model()
 
         if cfg.TRAIN_TBLOG and self.rank == 0:
+            print(f"Use Tensorboard !")
             from tensorboardX import SummaryWriter
             self.tblogger = SummaryWriter(cfg.DIR_TB_LOG)
 
@@ -373,6 +380,7 @@ class Trainer(object):
         else:
             self.print_log('No dataset!')
             exit(0)
+        print(f"{train_dataset = }")
 
         self.train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_dataset)
@@ -386,7 +394,7 @@ class Trainer(object):
                                        drop_last=True,
                                        prefetch_factor=4)
 
-        self.print_log('Done!')
+        self.print_log('Process dataset Done!')
 
     def overlay(self, image, mask, colors=[255, 0, 0], cscale=1, alpha=0.4):
         colors = np.atleast_2d(colors) * cscale
@@ -487,6 +495,7 @@ class Trainer(object):
             last_time = time.time()
             for frame_idx, sample in enumerate(train_loader):
                 if step > cfg.TRAIN_TOTAL_STEPS:
+                    print(f"{step = } is larger than {cfg.TRAIN_TOTAL_STEPS = }, Break !")
                     break
 
                 if step % cfg.TRAIN_TBLOG_STEP == 0 and self.rank == 0 and cfg.TRAIN_TBLOG:
