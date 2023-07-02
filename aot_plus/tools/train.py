@@ -1,10 +1,13 @@
 import importlib
+import os
 import random
 import sys
 
 sys.setrecursionlimit(10000)
 sys.path.append('.')
 sys.path.append('..')
+
+from utils.utils import Tee, copy_codes, make_log_dir
 
 import torch.multiprocessing as mp
 
@@ -38,11 +41,17 @@ def main():
     parser.add_argument('--total_step', type=int, default=-1.)
     parser.add_argument('--start_step', type=int, default=-1.)
 
+    parser.add_argument('--log', type=str, default='./logs')
+
     args = parser.parse_args()
 
     engine_config = importlib.import_module('configs.' + args.stage)
 
     cfg = engine_config.EngineConfig(args.exp_name, args.model)
+
+    log_dir = make_log_dir(args.log, cfg.EXP_NAME)
+    copy_codes(log_dir)
+    sys.stdout = Tee(os.path.join(log_dir, "print.log"))
 
     if len(args.datasets) > 0:
         cfg.DATASETS = args.datasets
