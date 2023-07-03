@@ -79,6 +79,9 @@ def main():
             random.randint(0, 9))
     else:
         cfg.DIST_URL = args.dist_url
+
+    cfg.save_self()
+
     if cfg.TRAIN_GPUS == 1:
        main_worker(0, cfg, args.amp, args.exp_name) 
     else:

@@ -149,3 +149,16 @@ class DefaultEngineConfig():
                 except Exception as inst:
                     print(inst)
                     print('Failed to make dir: {}.'.format(path))
+
+    def save_self(self):
+        with open(os.path.join(self.DIR_RESULT, "config.py"), 'w') as f:
+            f.write("""
+class Config():
+    def __init__(self):
+""")
+            for k, v in self.__dict__.items():
+                v = f'"{v}"' if isinstance(v, str) else v
+                f.write(f"""\
+        self.{k} = {v}
+""")
+
