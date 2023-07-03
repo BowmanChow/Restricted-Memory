@@ -1,8 +1,11 @@
 import importlib
 import sys
+import os
 
 sys.path.append('.')
 sys.path.append('..')
+
+from utils.utils import Tee, copy_codes, make_log_dir
 
 import torch
 import torch.multiprocessing as mp
@@ -54,10 +57,15 @@ def main():
     parser.add_argument('--amp', action='store_true')
     parser.set_defaults(amp=False)
 
+    parser.add_argument('--log', type=str, default='./eval_logs')
+
     args = parser.parse_args()
 
     engine_config = importlib.import_module('configs.' + args.stage)
     cfg = engine_config.EngineConfig(args.exp_name, args.model)
+
+    log_dir = make_log_dir(args.log, cfg.EXP_NAME)
+    sys.stdout = Tee(os.path.join(log_dir, "print.log"))
 
     cfg.TEST_EMA = not args.no_ema
 
