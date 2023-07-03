@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from tqdm import tqdm
 
 from dataloaders.eval_datasets import YOUTUBEVOS_Test, YOUTUBEVOS_DenseTest, DAVIS_Test, EVAL_TEST, VOST_Test
 import dataloaders.video_transforms as tr
@@ -261,7 +262,7 @@ class Evaluator(object):
                 max_gap = int(round(num_frames / 30))
                 gap = max(max_gap, 5)
 
-                for frame_idx, samples in enumerate(seq_dataloader):
+                for frame_idx, samples in enumerate(tqdm(seq_dataloader)):
 
                     all_preds = []
                     new_obj_label = None
