@@ -12,6 +12,7 @@ from utils.utils import Tee, copy_codes, make_log_dir
 import torch.multiprocessing as mp
 
 from networks.managers.trainer import Trainer
+from get_config import get_config
 
 
 def main_worker(gpu, cfg, enable_amp=True, exp_name='default'):
@@ -45,9 +46,7 @@ def main():
 
     args = parser.parse_args()
 
-    engine_config = importlib.import_module('configs.' + args.stage)
-
-    cfg = engine_config.EngineConfig(args.exp_name, args.model)
+    cfg = get_config(args.stage, args.exp_name, args.model)
 
     log_dir = make_log_dir(args.log, cfg.EXP_NAME)
     copy_codes(log_dir)
