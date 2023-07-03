@@ -417,7 +417,7 @@ class Evaluator(object):
                             os.path.join(self.result_root, seq_name,
                                          imgname[0].split('.')[0] + '.png'),
                             'mask':
-                            pred_label,
+                            pred_label.detach().cpu(),
                             'obj_idx':
                             obj_idx
                         })
@@ -428,7 +428,7 @@ class Evaluator(object):
                                              imgname[0].split('.')[0] +
                                              '.png'),
                                 'mask':
-                                pred_label,
+                                pred_label.detach().cpu(),
                                 'obj_idx':
                                 obj_idx
                             })
