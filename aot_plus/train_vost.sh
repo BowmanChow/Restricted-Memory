@@ -26,3 +26,8 @@ dataset="vost"
 split="val"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
 	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0
+
+
+model_name=$(python -c "from configs.models.$model import ModelConfig ;print(ModelConfig().MODEL_NAME)")
+cd ../evaluation
+python ./evaluation_method.py --results_path ../aot_plus/${result_path}/eval/vost/debug/
