@@ -11,6 +11,8 @@ model="r50_aotl"
 # model="swinb_aotl"
 	
 stage="pre_vost"
+result_path=$(python -c "from tools.get_config import get_config ;cfg = get_config('$stage', '$exp', '$model') ;print(cfg.DIR_RESULT)")
+echo "result_path=$result_path"
 CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 	--exp_name ${exp} \
 	--stage ${stage} \
@@ -19,7 +21,8 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 	--batch_size 2 \
 	# --log ./debug_logs
 
+
 dataset="vost"
 split="val"
-CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --exp_name ${exp} --stage ${stage} --model ${model} \
+CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
 	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0
