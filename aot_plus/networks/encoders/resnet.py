@@ -1,5 +1,7 @@
 import math
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from utils.learning import freeze_params
 
 
@@ -67,6 +69,7 @@ class ResNet(nn.Module):
             dilations = [1, 1, 2, 4]
         else:
             raise NotImplementedError
+        self.strides = strides
 
         # Modules
         self.conv1 = nn.Conv2d(3,
@@ -175,12 +178,111 @@ class ResNet(nn.Module):
                 freeze_params(stage)
 
 
+class Decode_Block(nn.Module):
+    def __init__(self, in_chans, out_chans, kernel_size, stride, padding=0):
+        super().__init__()
+        self.linear = nn.ConvTranspose2d(in_chans, out_chans, kernel_size, stride, padding=padding, bias=False)
+        self.linear2 = nn.Conv2d(out_chans, out_chans, kernel_size=1, bias=False)
+
+    def forward(self, x):
+        x = self.linear(x)
+        out = self.linear2(x)
+        return x, out
+
+
+class ResNet_TopDown(ResNet):
+    def __init__(self, block, layers, output_stride, BatchNorm, freeze_at=0):
+        super().__init__(block, layers, output_stride, BatchNorm, freeze_at)
+        dims = [64, 256, 512, 1024]
+        self.downsample_layers = []
+        self.downsample_layers.append(
+            nn.Sequential(
+                self.conv1,
+                self.bn1,
+                self.relu,
+                self.maxpool,
+            ))
+        self.downsample_layers.append(self.layer1)
+        self.downsample_layers.append(self.layer2)
+        self.downsample_layers.append(self.layer3)
+
+        self.decoders = nn.ModuleList()
+        self.decoders.append(
+            nn.Sequential(
+                nn.ConvTranspose2d(dims[0], dims[0], 3, 2, 1), # maxpool
+                Decode_Block(dims[0], 3, kernel_size=7, stride=2, padding=3), # conv1
+            ))
+        for i in range(3):
+            self.decoders.append(
+                Decode_Block(
+                    dims[i + 1], dims[i], kernel_size=3, stride=self.strides[i], padding=1,
+                ))
+        self.prompt = torch.nn.parameter.Parameter(torch.randn(dims[-1]), requires_grad=True)
+        self.top_down_transform = torch.nn.parameter.Parameter(torch.eye(dims[-1]), requires_grad=True)
+
+    def forward_features(self, x, td=None):
+        in_var = []
+        out_var = []
+        for i in range(4):
+            in_var.append(x)
+            if td is not None:
+                x = x + td[i]
+            x = self.downsample_layers[i](x)
+            out_var.append(x)
+        return x, in_var, out_var
+
+    def feedback(self, x):
+        td = []
+        for depth in range(len(self.decoders) - 1, -1, -1):
+            x, out = self.decoders[depth](x)
+            td = [out] + td
+        return td
+
+    def forward(self, x):
+        input = x
+        x, _, out_var = self.forward_features(input)
+
+        cos_sim = (F.normalize(x, dim=1) * F.normalize(
+            self.prompt[None, ..., None, None], dim=1)).sum(dim=1, keepdim=True)  # B, N, 1
+        mask = cos_sim.clamp(0, 1)
+        x = x * mask
+        x = (x.permute(0, 2, 3, 1) @ self.top_down_transform).permute(0, 3, 1, 2)
+        td = self.feedback(x)
+
+        x, in_var, out_var = self.forward_features(input, td)
+
+        var_loss = self.var_loss(in_var, out_var, x)
+
+        return out_var[1:] + [out_var[-1]], var_loss
+
+    def var_loss(self, in_var, out_var, x):
+        recon_loss = []
+        for depth in range(len(self.decoders) - 1, -1, -1):
+            recon, out = self.decoders[depth](out_var[depth].detach())
+            target = in_var[depth].detach()
+            recon_loss.append(F.mse_loss(recon, target))
+
+        return sum(recon_loss)
+
+
 def ResNet50(output_stride, BatchNorm, freeze_at=0):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3],
+                   output_stride,
+                   BatchNorm,
+                   freeze_at=freeze_at)
+    return model
+
+
+def ResNet50_TopDown(output_stride, BatchNorm, freeze_at=0):
+    """Constructs a ResNet-50 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet_TopDown(Bottleneck, [3, 4, 6, 3],
                    output_stride,
                    BatchNorm,
                    freeze_at=freeze_at)

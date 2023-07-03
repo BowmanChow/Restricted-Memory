@@ -1,6 +1,6 @@
 from networks.encoders.mobilenetv2 import MobileNetV2
 from networks.encoders.mobilenetv3 import MobileNetV3Large
-from networks.encoders.resnet import ResNet101, ResNet50
+from networks.encoders.resnet import ResNet101, ResNet50, ResNet50_TopDown
 from networks.encoders.resnest import resnest
 from networks.encoders.swin import build_swin_model
 from networks.layers.normalization import FrozenBatchNorm2d
@@ -19,6 +19,8 @@ def build_encoder(name, frozen_bn=True, freeze_at=-1):
         return MobileNetV3Large(16, BatchNorm, freeze_at=freeze_at)
     elif name == 'resnet50':
         return ResNet50(16, BatchNorm, freeze_at=freeze_at)
+    elif 'resnet50_topdown' in name:
+        return ResNet50_TopDown(16, BatchNorm, freeze_at=freeze_at)
     elif name == 'resnet101':
         return ResNet101(16, BatchNorm, freeze_at=freeze_at)
     elif name == 'resnest50':

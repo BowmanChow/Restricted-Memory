@@ -86,6 +86,10 @@ class DefaultEngineConfig():
         self.TRAIN_DATASET_FULL_RESOLUTION = False
         self.TRAIN_ENABLE_PREV_FRAME = False
         self.TRAIN_ENCODER_FREEZE_AT = 2
+        try:
+            self.TRAIN_ENCODER_FREEZE_AT = 4 if self.TOP_DOWN_FREEZE_ENCODER else self.TRAIN_ENCODER_FREEZE_AT
+        except AttributeError:
+            pass
         self.TRAIN_LSTT_EMB_DROPOUT = 0.
         self.TRAIN_LSTT_ID_DROPOUT = 0.
         self.TRAIN_LSTT_DROPPATH = 0.1

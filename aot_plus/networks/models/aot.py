@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from networks.encoders import build_encoder
@@ -79,6 +80,8 @@ class AOT(nn.Module):
 
         self._init_weight()
 
+        self.__var_losses = []
+
     def get_pos_emb(self, x):
         pos_emb = self.pos_generator(x)
         return pos_emb
@@ -89,7 +92,11 @@ class AOT(nn.Module):
         return id_emb
 
     def encode_image(self, img):
-        xs = self.encoder(img)
+        if "topdown" in self.cfg.MODEL_ENCODER:
+            xs, var_loss = self.encoder(img)
+            self.__var_losses.append(var_loss)
+        else:
+            xs = self.encoder(img)
         xs[-1] = self.encoder_projector(xs[-1])
         return xs
 
@@ -123,3 +130,10 @@ class AOT(nn.Module):
             self.patch_wise_id_bank.weight.view(
                 self.cfg.MODEL_ENCODER_EMBEDDING_DIM, -1).permute(0, 1),
             gain=17**-2 if self.cfg.MODEL_ALIGN_CORNERS else 16**-2)
+        
+    def get_var_loss(self):
+        if len(self.__var_losses) == 0:
+            return 0
+        var_loss = torch.stack(self.__var_losses).mean()
+        self.__var_losses = []
+        return var_loss
