@@ -23,6 +23,8 @@ args, _ = parser.parse_known_args()
 csv_name_global = f'global_results-{args.set}.csv'
 csv_name_per_sequence = f'per-sequence_results-{args.set}.csv'
 
+print(f"Evaluating {args.results_path}")
+
 # Check if the method has been evaluated before, if so read the results, otherwise compute the results
 csv_name_global_path = os.path.join(args.results_path, csv_name_global)
 csv_name_per_sequence_path = os.path.join(args.results_path, csv_name_per_sequence)
