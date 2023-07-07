@@ -1,3 +1,4 @@
+import gc
 import os
 import time
 import datetime as datetime
@@ -238,6 +239,7 @@ class Evaluator(object):
                 seq_name = seq_dataset.seq_name
                 print('GPU {} - Processing Seq {} [{}/{}]:'.format(
                     self.gpu, seq_name, video_num, total_video_num))
+                gc.collect()
                 torch.cuda.empty_cache()
 
                 seq_dataloader = DataLoader(seq_dataset,
