@@ -545,6 +545,8 @@ class AOTInferEngine(nn.Module):
         self.restart_engine()
 
     def restart_engine(self):
+        for engine in self.aot_engines:
+            engine.restart_engine()
         self.aot_engines = []
         self.obj_nums = None
 
