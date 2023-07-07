@@ -9,11 +9,12 @@ from utils.math import generate_permute_matrix
 from utils.image import one_hot_mask
 
 from networks.layers.basic import seq_to_2d
+from networks.models.aot import AOT
 
 
 class AOTEngine(nn.Module):
     def __init__(self,
-                 aot_model,
+                 aot_model: AOT,
                  gpu_id=0,
                  long_term_mem_gap=9999,
                  short_term_mem_skip=1):
