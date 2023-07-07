@@ -159,8 +159,15 @@ loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_lo
         self.offline_frames = all_frames.size(0) // self.batch_size
 
         # extract backbone features
-        self.offline_enc_embs = self.split_frames(
-            self.AOT.encode_image(all_frames), self.batch_size)
+        if self.cfg.USE_MASK:
+            if self.cfg.ORACLE:
+                masks = torch.where(all_masks == 255, 0, all_masks)
+                masks = (masks > 0).float()
+                self.offline_enc_embs = self.split_frames(
+                    self.AOT.encode_image(all_frames, masks), self.batch_size)
+        else:
+            self.offline_enc_embs = self.split_frames(
+                self.AOT.encode_image(all_frames), self.batch_size)
         self.total_offline_frame_num = len(self.offline_enc_embs)
 
         if all_masks is not None:

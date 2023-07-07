@@ -91,9 +91,12 @@ class AOT(nn.Module):
         id_emb = self.id_dropout(id_emb)
         return id_emb
 
-    def encode_image(self, img):
+    def encode_image(self, img, mask=None):
         if "topdown" in self.cfg.MODEL_ENCODER:
-            xs, var_loss = self.encoder(img)
+            if self.cfg.USE_MASK:
+                xs, var_loss = self.encoder(img, mask)
+            else:
+                xs, var_loss = self.encoder(img)
             self.__var_losses.append(var_loss)
         else:
             xs = self.encoder(img)

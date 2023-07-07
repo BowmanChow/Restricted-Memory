@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.learning import freeze_params
+from torchvision.transforms import functional as transformF
+from torchvision.transforms import InterpolationMode
 
 
 class Bottleneck(nn.Module):
@@ -191,7 +193,7 @@ class Decode_Block(nn.Module):
 
 
 class ResNet_TopDown(ResNet):
-    def __init__(self, block, layers, output_stride, BatchNorm, freeze_at=0):
+    def __init__(self, block, layers, output_stride, BatchNorm, freeze_at=0, use_mask=False):
         super().__init__(block, layers, output_stride, BatchNorm, freeze_at)
         dims = [64, 256, 512, 1024]
         self.downsample_layers = []
@@ -220,6 +222,8 @@ class ResNet_TopDown(ResNet):
         self.prompt = torch.nn.parameter.Parameter(torch.randn(dims[-1]), requires_grad=True)
         self.top_down_transform = torch.nn.parameter.Parameter(torch.eye(dims[-1]), requires_grad=True)
 
+        self.use_mask = use_mask
+
     def forward_features(self, x, td=None):
         in_var = []
         out_var = []
@@ -238,13 +242,17 @@ class ResNet_TopDown(ResNet):
             td = [out] + td
         return td
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         input = x
         x, _, out_var = self.forward_features(input)
 
-        cos_sim = (F.normalize(x, dim=1) * F.normalize(
-            self.prompt[None, ..., None, None], dim=1)).sum(dim=1, keepdim=True)  # B, N, 1
-        mask = cos_sim.clamp(0, 1)
+        if self.use_mask:
+            mask = mask.detach().float()
+            mask = transformF.resize(mask, x.shape[2:], InterpolationMode.BILINEAR)
+        else:
+            cos_sim = (F.normalize(x, dim=1) * F.normalize(
+                self.prompt[None, ..., None, None], dim=1)).sum(dim=1, keepdim=True)  # B, N, 1
+            mask = cos_sim.clamp(0, 1)
         x = x * mask
         x = (x.permute(0, 2, 3, 1) @ self.top_down_transform).permute(0, 3, 1, 2)
         td = self.feedback(x)
