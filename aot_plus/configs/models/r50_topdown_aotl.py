@@ -4,7 +4,7 @@ from .default import DefaultModelConfig
 class ModelConfig(DefaultModelConfig):
     def __init__(self):
         super().__init__()
-        self.TOP_DOWN_FREEZE_ENCODER = True
+        self.TOP_DOWN_FREEZE_ENCODER = False
         freeze_text = "_Freeze" if self.TOP_DOWN_FREEZE_ENCODER else ""
         self.VAR_LOSS_WEIGHT = 0.01
         var_loss_text = f"_var_{self.VAR_LOSS_WEIGHT}"
