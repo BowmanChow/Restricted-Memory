@@ -20,4 +20,4 @@ class EngineConfig(DefaultEngineConfig):
         self.MODEL_IGNORE_TOKEN = True
 
         self.PRETRAIN_FULL = True  # if False, load encoder only
-        self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'pre_ytb.pth')
+        self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'R50_AOTL_PRE_YTB_DAV.pth')
