@@ -548,7 +548,7 @@ class AOTInferEngine(nn.Module):
         self.long_term_mem_gap = long_term_mem_gap
         self.short_term_mem_skip = short_term_mem_skip
 
-        self.aot_engines = []
+        self.aot_engines: List[AOTEngine] = []
 
         self.restart_engine()
 
