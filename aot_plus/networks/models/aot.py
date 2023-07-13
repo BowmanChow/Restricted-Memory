@@ -14,12 +14,16 @@ class AOT(nn.Module):
         self.max_obj_num = cfg.MODEL_MAX_OBJ_NUM
         self.epsilon = cfg.MODEL_EPSILON
 
-        self.encoder = build_encoder(encoder,
-                                     frozen_bn=cfg.MODEL_FREEZE_BN,
-                                     freeze_at=cfg.TRAIN_ENCODER_FREEZE_AT)
-        self.encoder_projector = nn.Conv2d(cfg.MODEL_ENCODER_DIM[-1],
-                                           cfg.MODEL_ENCODER_EMBEDDING_DIM,
-                                           kernel_size=1)
+        self.encoder = build_encoder(
+            encoder,
+            frozen_bn=cfg.MODEL_FREEZE_BN,
+            freeze_at=cfg.TRAIN_ENCODER_FREEZE_AT,
+        )
+        self.encoder_projector = nn.Conv2d(
+            cfg.MODEL_ENCODER_DIM[-1],
+            cfg.MODEL_ENCODER_EMBEDDING_DIM,
+            kernel_size=1,
+        )
 
         self.LSTT = LongShortTermTransformer(
             cfg.MODEL_LSTT_NUM,
@@ -40,7 +44,8 @@ class AOT(nn.Module):
             linear_q=cfg.MODEL_LINEAR_Q,
             norm_inp=cfg.MODEL_NORM_INP,
             recurrent_stm=cfg.MODEL_RECURRENT_STM,
-            recurrent_ltm=cfg.MODEL_RECURRENT_LTM)
+            recurrent_ltm=cfg.MODEL_RECURRENT_LTM,
+        )
 
         decoder_indim = cfg.MODEL_ENCODER_EMBEDDING_DIM * \
             (cfg.MODEL_LSTT_NUM +
@@ -133,7 +138,7 @@ class AOT(nn.Module):
             self.patch_wise_id_bank.weight.view(
                 self.cfg.MODEL_ENCODER_EMBEDDING_DIM, -1).permute(0, 1),
             gain=17**-2 if self.cfg.MODEL_ALIGN_CORNERS else 16**-2)
-        
+
     def get_var_loss(self):
         if len(self.__var_losses) == 0:
             return 0
