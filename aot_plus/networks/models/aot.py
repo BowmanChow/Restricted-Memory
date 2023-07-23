@@ -18,6 +18,7 @@ class AOT(nn.Module):
             encoder,
             frozen_bn=cfg.MODEL_FREEZE_BN,
             freeze_at=cfg.TRAIN_ENCODER_FREEZE_AT,
+            use_mask=cfg.USE_MASK,
         )
         self.encoder_projector = nn.Conv2d(
             cfg.MODEL_ENCODER_DIM[-1],
@@ -98,8 +99,16 @@ class AOT(nn.Module):
 
     def encode_image(self, img, mask=None):
         if "topdown" in self.cfg.MODEL_ENCODER:
-            if self.cfg.USE_MASK:
-                xs, var_loss = self.encoder(img, mask)
+            if hasattr(self.cfg, "USE_MASK") and self.cfg.USE_MASK:
+                mask_d = mask.detach()
+                if (mask_d.shape[1] == 1) and not torch.is_floating_point(mask_d) and not torch.is_complex(mask_d):
+                    mask_d = torch.where(mask_d == 255, 0, mask_d)
+                    mask_d = (mask_d > 0).float()
+                elif (mask_d.shape[1] > 1) and torch.is_floating_point(mask_d):
+                    mask_d = 1-mask_d[:, 0:1, ...]
+                else:
+                    raise Exception("mask is not expected !")
+                xs, var_loss = self.encoder(img, mask_d)
             else:
                 xs, var_loss = self.encoder(img)
             self.__var_losses.append(var_loss)

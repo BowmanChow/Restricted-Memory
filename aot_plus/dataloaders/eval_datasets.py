@@ -277,12 +277,14 @@ class VOST_Test(object):
                  root='./DAVIS',
                  transform=None,
                  rgb=True,
-                 result_root=None):
+                 result_root=None,
+                 is_oracle=False,
+                 ):
         self.transform = transform
         self.rgb = rgb
         self.result_root = result_root
         self.single_obj = False
-        self.image_root = os.path.join(root, 'JPEGImages_10fps')
+        self.image_root = os.path.join(root, 'JPEGImages' if is_oracle else 'JPEGImages_10fps')
         self.label_root = os.path.join(root, 'Annotations')
         seq_names = []
         for spt in split:
@@ -292,6 +294,7 @@ class VOST_Test(object):
             seqs_tmp = list(map(lambda elem: elem.strip(), seqs_tmp))
             seq_names.extend(seqs_tmp)
         self.seqs = list(np.unique(seq_names))
+        self.is_oracle = is_oracle
 
     def __len__(self):
         return len(self.seqs)
@@ -300,7 +303,10 @@ class VOST_Test(object):
         seq_name = self.seqs[idx]
         images = list(
             np.sort(os.listdir(os.path.join(self.image_root, seq_name))))
-        labels = [images[0].replace('jpg', 'png')]
+        if self.is_oracle:
+            labels = [i.replace('jpg', 'png') for i in images]
+        else:
+            labels = [images[0].replace('jpg', 'png')]
 
         if not os.path.isfile(
                 os.path.join(self.result_root, seq_name, labels[0])):

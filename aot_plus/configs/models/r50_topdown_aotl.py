@@ -9,8 +9,9 @@ class ModelConfig(DefaultModelConfig):
         self.VAR_LOSS_WEIGHT = 0.01
         var_loss_text = f"_var_{self.VAR_LOSS_WEIGHT}"
         self.ORACLE = False
-        self.USE_MASK = self.ORACLE
-        mask_text = f"_{'Mask' if self.USE_MASK else ''}_{'Oracle' if self.ORACLE else ''}"
+        self.PREV_PROBE = False if self.ORACLE else True
+        self.USE_MASK = self.ORACLE or self.PREV_PROBE
+        mask_text = f"{'_Mask' if self.USE_MASK else ''}{'_Oracle' if self.ORACLE else ('_PrevProbe' if self.PREV_PROBE else '')}"
         self.MODEL_NAME = f'R50_TopDown{freeze_text}{var_loss_text}{mask_text}_AOTL'
 
         self.MODEL_ENCODER = f'resnet50_topdown{freeze_text}{var_loss_text}{mask_text}'

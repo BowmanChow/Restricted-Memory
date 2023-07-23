@@ -49,9 +49,15 @@ class AOTEngine(nn.Module):
         aux_weight = self.aux_weight * max(self.aux_step - step,
                                            0.) / self.aux_step
 
-        self.offline_encoder(all_frames, all_masks)
+        if self.cfg.PREV_PROBE:
+            self.split_all_frames = torch.split(all_frames, self.batch_size, dim=0)
+            self.generate_offline_masks(all_masks)
+            self.total_offline_frame_num = len(self.offline_masks)
+            self.add_reference_frame(img=self.split_all_frames[self.frame_step], mask=self.offline_masks[self.frame_step], frame_step=0, obj_nums=obj_nums)
+        else:
+            self.offline_encoder(all_frames, all_masks)
 
-        self.add_reference_frame(frame_step=0, obj_nums=obj_nums)
+            self.add_reference_frame(frame_step=0, obj_nums=obj_nums)
 
         grad_state = torch.no_grad if aux_weight == 0 else torch.enable_grad
         with grad_state():
@@ -70,7 +76,7 @@ class AOTEngine(nn.Module):
             aux_losses.append(prev_aux_loss)
             aux_masks.append(prev_aux_mask)
         else:
-            self.match_propogate_one_frame()
+            self.match_propogate_one_frame(mask=self.offline_masks[self.frame_step])
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
             self.update_short_term_memory(
@@ -80,7 +86,7 @@ class AOTEngine(nn.Module):
             curr_losses.append(curr_loss)
             curr_masks.append(curr_mask)
 
-        self.match_propogate_one_frame()
+        self.match_propogate_one_frame(mask=curr_prob)
         curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
             self.offline_masks[self.frame_step], step, return_prob=True)
         curr_losses.append(curr_loss)
@@ -90,7 +96,7 @@ class AOTEngine(nn.Module):
                 curr_mask if not use_prev_prob else curr_prob,
                 None if use_prev_pred else self.assign_identity(
                     self.offline_one_hot_masks[self.frame_step], self.offline_ignore_masks[self.frame_step]))
-            self.match_propogate_one_frame()
+            self.match_propogate_one_frame(mask=curr_prob)
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
             curr_losses.append(curr_loss)
@@ -142,7 +148,10 @@ loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_lo
         elif img is None:
             curr_enc_embs = None
         else:
-            curr_enc_embs = self.AOT.encode_image(img)
+            if hasattr(self.cfg, 'USE_MASK') and self.cfg.USE_MASK:
+                curr_enc_embs = self.AOT.encode_image(img, mask=mask)
+            else:
+                curr_enc_embs = self.AOT.encode_image(img)
 
         if mask is not None:
             curr_one_hot_mask, curr_ignore_mask = one_hot_mask(mask, self.max_obj_num)
@@ -162,10 +171,8 @@ loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_lo
         # extract backbone features
         if self.cfg.USE_MASK:
             if self.cfg.ORACLE:
-                masks = torch.where(all_masks == 255, 0, all_masks)
-                masks = (masks > 0).float()
                 self.offline_enc_embs = self.split_frames(
-                    self.AOT.encode_image(all_frames, masks), self.batch_size)
+                    self.AOT.encode_image(all_frames, all_masks), self.batch_size)
         else:
             self.offline_enc_embs = self.split_frames(
                 self.AOT.encode_image(all_frames), self.batch_size)
@@ -173,17 +180,20 @@ loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_lo
 
         if all_masks is not None:
             # extract mask embeddings
-            offline_one_hot_masks, offline_ignore_masks = one_hot_mask(all_masks, self.max_obj_num)
-            self.offline_masks = list(
-                torch.split(all_masks, self.batch_size, dim=0))
-            self.offline_one_hot_masks = list(
-                torch.split(offline_one_hot_masks, self.batch_size, dim=0))
-            self.offline_ignore_masks = list(
-                torch.split(offline_ignore_masks, self.batch_size, dim=0))
+            self.generate_offline_masks(all_masks)
 
         if self.input_size_2d is None:
             self.update_size(all_frames.size()[2:],
                              self.offline_enc_embs[0][-1].size()[2:])
+
+    def generate_offline_masks(self, masks):
+        offline_one_hot_masks, offline_ignore_masks = one_hot_mask(masks, self.max_obj_num)
+        self.offline_masks = list(
+            torch.split(masks, self.batch_size, dim=0))
+        self.offline_one_hot_masks = list(
+            torch.split(offline_one_hot_masks, self.batch_size, dim=0))
+        self.offline_ignore_masks = list(
+            torch.split(offline_ignore_masks, self.batch_size, dim=0))
 
     def assign_identity(self, one_hot_mask, ignore_mask=None):
         if ignore_mask is None:
@@ -381,11 +391,17 @@ loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_lo
             self.update_long_term_memory(lstt_curr_inputs)
             self.last_mem_step = self.frame_step
 
-    def match_propogate_one_frame(self, img=None, img_embs=None):
+    def match_propogate_one_frame(self, img=None, img_embs=None, mask=None):
         self.frame_step += 1
+        if (not self.enable_offline_enc) and (img is None):
+            img = self.split_all_frames[self.frame_step]
         if img_embs is None:
-            curr_enc_embs, _ = self.encode_one_img_mask(
-                img, None, self.frame_step)
+            if hasattr(self.cfg, "USE_MASK") and self.cfg.USE_MASK:
+                curr_enc_embs, _ = self.encode_one_img_mask(
+                    img, mask, self.frame_step)
+            else:
+                curr_enc_embs, _ = self.encode_one_img_mask(
+                    img, None, self.frame_step)
         else:
             curr_enc_embs = img_embs
         self.curr_enc_embs = curr_enc_embs
@@ -646,10 +662,10 @@ class AOTInferEngine(nn.Module):
 
         self.update_size()
 
-    def match_propogate_one_frame(self, img=None):
+    def match_propogate_one_frame(self, img=None, mask=None):
         img_embs = None
         for aot_engine in self.aot_engines:
-            aot_engine.match_propogate_one_frame(img, img_embs=img_embs)
+            aot_engine.match_propogate_one_frame(img, img_embs=img_embs, mask=mask)
             if img_embs is None:  # reuse image embeddings
                 img_embs = aot_engine.curr_enc_embs
 

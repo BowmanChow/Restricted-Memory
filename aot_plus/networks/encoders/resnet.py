@@ -285,7 +285,7 @@ def ResNet50(output_stride, BatchNorm, freeze_at=0):
     return model
 
 
-def ResNet50_TopDown(output_stride, BatchNorm, freeze_at=0):
+def ResNet50_TopDown(output_stride, BatchNorm, freeze_at=0, use_mask=False):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -293,7 +293,9 @@ def ResNet50_TopDown(output_stride, BatchNorm, freeze_at=0):
     model = ResNet_TopDown(Bottleneck, [3, 4, 6, 3],
                    output_stride,
                    BatchNorm,
-                   freeze_at=freeze_at)
+                   freeze_at=freeze_at,
+                   use_mask=use_mask,
+                )
     return model
 
 

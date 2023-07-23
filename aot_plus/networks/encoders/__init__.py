@@ -7,7 +7,7 @@ from networks.layers.normalization import FrozenBatchNorm2d
 from torch import nn
 
 
-def build_encoder(name, frozen_bn=True, freeze_at=-1):
+def build_encoder(name, frozen_bn=True, freeze_at=-1, use_mask=False):
     if frozen_bn:
         BatchNorm = FrozenBatchNorm2d
     else:
@@ -20,7 +20,7 @@ def build_encoder(name, frozen_bn=True, freeze_at=-1):
     elif name == 'resnet50':
         return ResNet50(16, BatchNorm, freeze_at=freeze_at)
     elif 'resnet50_topdown' in name:
-        return ResNet50_TopDown(16, BatchNorm, freeze_at=freeze_at)
+        return ResNet50_TopDown(16, BatchNorm, freeze_at=freeze_at, use_mask=use_mask)
     elif name == 'resnet101':
         return ResNet101(16, BatchNorm, freeze_at=freeze_at)
     elif name == 'resnest50':

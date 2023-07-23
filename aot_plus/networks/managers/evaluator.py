@@ -173,7 +173,9 @@ class Evaluator(object):
                 split=[cfg.TEST_DATASET_SPLIT],
                 root=cfg.DIR_VOST,
                 transform=eval_transforms,
-                result_root=self.result_root)
+                result_root=self.result_root,
+                is_oracle=True if cfg.ORACLE else False,
+            )
         elif cfg.TEST_DATASET == 'test':
             self.result_root = os.path.join(cfg.DIR_EVALUATION,
                                             cfg.TEST_DATASET, eval_name,
@@ -313,11 +315,12 @@ class Evaluator(object):
                             _current_label = F.interpolate(
                                 current_label,
                                 size=current_img.size()[2:],
-                                mode="nearest")
+                                mode="nearest").int()
                             engine.add_reference_frame(current_img,
                                                        _current_label,
                                                        frame_step=0,
                                                        obj_nums=obj_nums)
+                            pred_prob = _current_label
                         else:
                             if aug_idx == 0:
                                 seq_timers.append([])
@@ -326,7 +329,20 @@ class Evaluator(object):
                                 now_timer.record()
                                 seq_timers[-1].append((now_timer))
 
-                            engine.match_propogate_one_frame(current_img)
+                            if self.cfg.USE_MASK:
+                                if self.cfg.PREV_PROBE:
+                                    engine.match_propogate_one_frame(current_img, mask=pred_prob)
+                                elif self.cfg.ORACLE:
+                                    _current_label = F.interpolate(
+                                        current_label,
+                                        size=current_img.size()[2:],
+                                        mode="nearest").int()
+                                    engine.match_propogate_one_frame(current_img, mask=_current_label)
+                                    current_label = None
+                                else:
+                                    raise Exception("Unexpeted !")
+                            else:
+                                engine.match_propogate_one_frame(current_img)
                             pred_logit = engine.decode_current_logits(
                                 (ori_height, ori_width))
 
