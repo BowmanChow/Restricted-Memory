@@ -220,7 +220,7 @@ class Evaluator(object):
                     self.seq_queue.put('END')
             coming_seq_idx = self.seq_queue.get()
 
-        all_engines = []
+        all_engines: List[AOTInferEngine] = []
         with torch.no_grad():
             for seq_idx, seq_dataset in enumerate(self.dataset):
                 video_num += 1
