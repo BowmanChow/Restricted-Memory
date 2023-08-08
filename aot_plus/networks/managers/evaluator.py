@@ -511,10 +511,10 @@ class Evaluator(object):
                         max_mem))
 
         if self.rank == 0:
-            zip_folder(self.source_folder, self.zip_dir)
-            self.print_log('Saving result to {}.'.format(self.zip_dir))
-            if 'all_frames' in cfg.TEST_DATASET_SPLIT:
-                zip_folder(self.result_root_sparse, self.zip_dir_sparse)
+            # zip_folder(self.source_folder, self.zip_dir)
+            # self.print_log('Saving result to {}.'.format(self.zip_dir))
+            # if 'all_frames' in cfg.TEST_DATASET_SPLIT:
+            #     zip_folder(self.result_root_sparse, self.zip_dir_sparse)
             end_eval_time = time.time()
             total_eval_time = str(
                 datetime.timedelta(seconds=int(end_eval_time -
