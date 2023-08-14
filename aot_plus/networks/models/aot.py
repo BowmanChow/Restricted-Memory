@@ -49,8 +49,8 @@ class AOT(nn.Module):
         )
 
         decoder_indim = cfg.MODEL_ENCODER_EMBEDDING_DIM * \
-            (cfg.MODEL_LSTT_NUM +
-             1) if cfg.MODEL_DECODER_INTERMEDIATE_LSTT else cfg.MODEL_ENCODER_EMBEDDING_DIM
+            (cfg.MODEL_LSTT_NUM + 1) if cfg.MODEL_DECODER_INTERMEDIATE_LSTT else \
+            cfg.MODEL_ENCODER_EMBEDDING_DIM
 
         self.decoder = build_decoder(
             decoder,
@@ -59,7 +59,8 @@ class AOT(nn.Module):
             decode_intermediate_input=cfg.MODEL_DECODER_INTERMEDIATE_LSTT,
             hidden_dim=cfg.MODEL_ENCODER_EMBEDDING_DIM,
             shortcut_dims=cfg.MODEL_ENCODER_DIM,
-            align_corners=cfg.MODEL_ALIGN_CORNERS)
+            align_corners=cfg.MODEL_ALIGN_CORNERS,
+        )
 
         id_dim = cfg.MODEL_MAX_OBJ_NUM + 1
         if cfg.MODEL_IGNORE_TOKEN:
@@ -70,19 +71,23 @@ class AOT(nn.Module):
                 cfg.MODEL_ENCODER_EMBEDDING_DIM,
                 kernel_size=17,
                 stride=16,
-                padding=8)
+                padding=8,
+            )
         else:
             self.patch_wise_id_bank = nn.Conv2d(
                 id_dim,
                 cfg.MODEL_ENCODER_EMBEDDING_DIM,
                 kernel_size=16,
                 stride=16,
-                padding=0)
+                padding=0,
+            )
 
         self.id_dropout = nn.Dropout(cfg.TRAIN_LSTT_ID_DROPOUT, True)
 
         self.pos_generator = PositionEmbeddingSine(
-            cfg.MODEL_ENCODER_EMBEDDING_DIM // 2, normalize=True)
+            cfg.MODEL_ENCODER_EMBEDDING_DIM // 2,
+            normalize=True,
+        )
 
         self._init_weight()
 
@@ -125,18 +130,25 @@ class AOT(nn.Module):
         pred_logit = self.decoder(decoder_inputs, shortcuts)
         return pred_logit
 
-    def LSTT_forward(self,
-                     curr_embs,
-                     long_term_memories,
-                     short_term_memories,
-                     curr_id_emb=None,
-                     pos_emb=None,
-                     size_2d=(30, 30)):
+    def LSTT_forward(
+        self,
+        curr_embs,
+        long_term_memories,
+        short_term_memories,
+        curr_id_emb=None,
+        pos_emb=None,
+        size_2d=(30, 30),
+    ):
         n, c, h, w = curr_embs[-1].size()
         curr_emb = curr_embs[-1].view(n, c, h * w).permute(2, 0, 1)
-        lstt_embs, lstt_memories = self.LSTT(curr_emb, long_term_memories,
-                                             short_term_memories, curr_id_emb,
-                                             pos_emb, size_2d)
+        lstt_embs, lstt_memories = self.LSTT(
+            curr_emb,
+            long_term_memories,
+            short_term_memories,
+            curr_id_emb,
+            pos_emb,
+            size_2d,
+        )
         lstt_curr_memories, lstt_long_memories, lstt_short_memories = zip(
             *lstt_memories)
         return lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories
@@ -145,7 +157,9 @@ class AOT(nn.Module):
         nn.init.xavier_uniform_(self.encoder_projector.weight)
         nn.init.orthogonal_(
             self.patch_wise_id_bank.weight.view(
-                self.cfg.MODEL_ENCODER_EMBEDDING_DIM, -1).permute(0, 1),
+                self.cfg.MODEL_ENCODER_EMBEDDING_DIM,
+                -1,
+            ).permute(0, 1),
             gain=17**-2 if self.cfg.MODEL_ALIGN_CORNERS else 16**-2)
 
     def get_var_loss(self):
