@@ -14,6 +14,7 @@ def _get_norm(indim, type='ln', groups=8):
     else:
         return nn.LayerNorm(indim)
 
+
 def _get_activation_fn(activation):
     """Return an activation function given a string"""
     if activation == "relu":
@@ -27,29 +28,31 @@ def _get_activation_fn(activation):
 
 
 class LongShortTermTransformer(nn.Module):
-    def __init__(self,
-                 num_layers=2,
-                 d_model=256,
-                 self_nhead=8,
-                 att_nhead=8,
-                 dim_feedforward=1024,
-                 emb_dropout=0.,
-                 droppath=0.1,
-                 lt_dropout=0.,
-                 st_dropout=0.,
-                 droppath_lst=False,
-                 droppath_scaling=False,
-                 activation="gelu",
-                 return_intermediate=False,
-                 intermediate_norm=True,
-                 final_norm=True,
-                 simplified=False,
-                 stopgrad=False,
-                 joint_longatt=False,
-                 linear_q=False,
-                 recurrent_stm=False,
-                 norm_inp=False,
-                 recurrent_ltm=False):
+    def __init__(
+        self,
+        num_layers=2,
+        d_model=256,
+        self_nhead=8,
+        att_nhead=8,
+        dim_feedforward=1024,
+        emb_dropout=0.,
+        droppath=0.1,
+        lt_dropout=0.,
+        st_dropout=0.,
+        droppath_lst=False,
+        droppath_scaling=False,
+        activation="gelu",
+        return_intermediate=False,
+        intermediate_norm=True,
+        final_norm=True,
+        simplified=False,
+        stopgrad=False,
+        joint_longatt=False,
+        linear_q=False,
+        recurrent_stm=False,
+        norm_inp=False,
+        recurrent_ltm=False,
+    ):
 
         super().__init__()
         self.intermediate_norm = intermediate_norm
@@ -70,19 +73,32 @@ class LongShortTermTransformer(nn.Module):
                 droppath_rate = droppath
             if simplified:
                 layers.append(
-                    SimplifiedTransformerBlock(d_model, self_nhead, att_nhead,
-                                                dim_feedforward, droppath_rate,
-                                                activation, stopgrad=stopgrad, joint_longatt=joint_longatt, linear_q=linear_q, recurrent_stm=recurrent_stm))
+                    SimplifiedTransformerBlock(
+                        d_model, self_nhead, att_nhead,
+                        dim_feedforward, droppath_rate,
+                        activation,
+                        stopgrad=stopgrad,
+                        joint_longatt=joint_longatt,
+                        linear_q=linear_q,
+                        recurrent_stm=recurrent_stm,
+                    ))
             elif recurrent_ltm:
-                layers.append(RecurrentLongNormalShortBlock(d_model, self_nhead, att_nhead,
-                                                dim_feedforward, droppath_rate,
-                                                activation))
+                layers.append(
+                    RecurrentLongNormalShortBlock(
+                        d_model, self_nhead, att_nhead,
+                        dim_feedforward,
+                        droppath_rate,
+                        activation,
+                    ))
             else:
                 layers.append(
-                    LongShortTermTransformerBlock(d_model, self_nhead, att_nhead,
-                                                  dim_feedforward, droppath_rate,
-                                                  lt_dropout, st_dropout,
-                                                  droppath_lst, activation))
+                    LongShortTermTransformerBlock(
+                        d_model, self_nhead, att_nhead,
+                        dim_feedforward, droppath_rate,
+                        lt_dropout, st_dropout,
+                        droppath_lst,
+                        activation,
+                    ))
         self.layers = nn.ModuleList(layers)
 
         num_norms = num_layers - 1 if intermediate_norm else 0
@@ -95,13 +111,15 @@ class LongShortTermTransformer(nn.Module):
         if self.decoder_norms is not None:
             self.decoder_norms = nn.ModuleList(self.decoder_norms)
 
-    def forward(self,
-                tgt,
-                long_term_memories,
-                short_term_memories,
-                curr_id_emb=None,
-                self_pos=None,
-                size_2d=None):
+    def forward(
+        self,
+        tgt,
+        long_term_memories,
+        short_term_memories,
+        curr_id_emb=None,
+        self_pos=None,
+        size_2d=None,
+    ):
 
         output = self.emb_dropout(tgt)
 
@@ -109,14 +127,16 @@ class LongShortTermTransformer(nn.Module):
         intermediate_memories = []
 
         for idx, layer in enumerate(self.layers):
-            output, memories = layer(output,
-                                     long_term_memories[idx] if
-                                     long_term_memories is not None else None,
-                                     short_term_memories[idx] if
-                                     short_term_memories is not None else None,
-                                     curr_id_emb=curr_id_emb,
-                                     self_pos=self_pos,
-                                     size_2d=size_2d)
+            output, memories = layer(
+                output,
+                long_term_memories[idx] if
+                long_term_memories is not None else None,
+                short_term_memories[idx] if
+                short_term_memories is not None else None,
+                curr_id_emb=curr_id_emb,
+                self_pos=self_pos,
+                size_2d=size_2d,
+            )
 
             if self.return_intermediate:
                 intermediate.append(output)
@@ -142,18 +162,20 @@ class LongShortTermTransformer(nn.Module):
 
 
 class LongShortTermTransformerBlock(nn.Module):
-    def __init__(self,
-                 d_model,
-                 self_nhead,
-                 att_nhead,
-                 dim_feedforward=1024,
-                 droppath=0.1,
-                 lt_dropout=0.,
-                 st_dropout=0.,
-                 droppath_lst=False,
-                 activation="gelu",
-                 local_dilation=1,
-                 enable_corr=True):
+    def __init__(
+        self,
+        d_model,
+        self_nhead,
+        att_nhead,
+        dim_feedforward=1024,
+        droppath=0.1,
+        lt_dropout=0.,
+        st_dropout=0.,
+        droppath_lst=False,
+        activation="gelu",
+        local_dilation=1,
+        enable_corr=True,
+    ):
         super().__init__()
 
         # Self-attention
@@ -165,10 +187,12 @@ class LongShortTermTransformerBlock(nn.Module):
         self.linear_Q = nn.Linear(d_model, d_model)
         self.linear_V = nn.Linear(d_model, d_model)
 
-        self.long_term_attn = MultiheadAttention(d_model,
-                                                 att_nhead,
-                                                 use_linear=False,
-                                                 dropout=lt_dropout)
+        self.long_term_attn = MultiheadAttention(
+            d_model,
+            att_nhead,
+            use_linear=False,
+            dropout=lt_dropout,
+        )
         if enable_corr:
             try:
                 import spatial_correlation_sampler
@@ -181,11 +205,13 @@ class LongShortTermTransformerBlock(nn.Module):
                 MultiheadLocalAttention = MultiheadLocalAttentionV3
         else:
             MultiheadLocalAttention = MultiheadLocalAttentionV3
-        self.short_term_attn = MultiheadLocalAttention(d_model,
-                                                       att_nhead,
-                                                       dilation=local_dilation,
-                                                       use_linear=False,
-                                                       dropout=st_dropout)
+        self.short_term_attn = MultiheadLocalAttention(
+            d_model,
+            att_nhead,
+            dilation=local_dilation,
+            use_linear=False,
+            dropout=st_dropout,
+        )
 
         self.droppath_lst = droppath_lst
 
@@ -205,13 +231,15 @@ class LongShortTermTransformerBlock(nn.Module):
             pos = pos.view(h, w, n, c).permute(2, 3, 0, 1)
         return tensor if pos is None else tensor + pos
 
-    def forward(self,
-                tgt,
-                long_term_memory=None,
-                short_term_memory=None,
-                curr_id_emb=None,
-                self_pos=None,
-                size_2d=(30, 30)):
+    def forward(
+        self,
+        tgt,
+        long_term_memory=None,
+        short_term_memory=None,
+        curr_id_emb=None,
+        self_pos=None,
+        size_2d=(30, 30),
+    ):
 
         # Self-attention
         _tgt = self.norm1(tgt)
@@ -254,24 +282,29 @@ class LongShortTermTransformerBlock(nn.Module):
 
         tgt = tgt + self.droppath(tgt2)
 
-        return tgt, [[curr_K, curr_V], [global_K, global_V],
-                     [local_K, local_V]]
+        return tgt, [
+            [curr_K, curr_V], [global_K, global_V],
+            [local_K, local_V],
+        ]
 
     def _init_weight(self):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+
 class RecurrentLongNormalShortBlock(nn.Module):
-    def __init__(self,
-                 d_model,
-                 self_nhead,
-                 att_nhead,
-                 dim_feedforward=1024,
-                 droppath=0.1,
-                 activation="gelu",
-                 local_dilation=1,
-                 enable_corr=True):
+    def __init__(
+        self,
+        d_model,
+        self_nhead,
+        att_nhead,
+        dim_feedforward=1024,
+        droppath=0.1,
+        activation="gelu",
+        local_dilation=1,
+        enable_corr=True,
+    ):
         super().__init__()
 
         # Self-attention
@@ -284,9 +317,11 @@ class RecurrentLongNormalShortBlock(nn.Module):
         self.linear_V = nn.Linear(d_model, d_model)
         self.linear_QMem = nn.Linear(d_model, d_model)
 
-        self.long_term_attn = MultiheadAttention(d_model,
-                                                 att_nhead,
-                                                 use_linear=False)
+        self.long_term_attn = MultiheadAttention(
+            d_model,
+            att_nhead,
+            use_linear=False,
+        )
         if enable_corr:
             try:
                 import spatial_correlation_sampler
@@ -299,10 +334,12 @@ class RecurrentLongNormalShortBlock(nn.Module):
                 MultiheadLocalAttention = MultiheadLocalAttentionV3
         else:
             MultiheadLocalAttention = MultiheadLocalAttentionV3
-        self.short_term_attn = MultiheadLocalAttention(d_model,
-                                                       att_nhead,
-                                                       dilation=local_dilation,
-                                                       use_linear=False)
+        self.short_term_attn = MultiheadLocalAttention(
+            d_model,
+            att_nhead,
+            dilation=local_dilation,
+            use_linear=False,
+        )
 
         # Feed-forward
         self.norm3 = _get_norm(d_model)
@@ -320,13 +357,15 @@ class RecurrentLongNormalShortBlock(nn.Module):
             pos = pos.view(h, w, n, c).permute(2, 3, 0, 1)
         return tensor if pos is None else tensor + pos
 
-    def forward(self,
-                tgt,
-                long_term_memory=None,
-                short_term_memory=None,
-                curr_id_emb=None,
-                self_pos=None,
-                size_2d=(30, 30)):
+    def forward(
+        self,
+        tgt,
+        long_term_memory=None,
+        short_term_memory=None,
+        curr_id_emb=None,
+        self_pos=None,
+        size_2d=(30, 30),
+    ):
 
         # Self-attention
         _tgt = self.norm1(tgt)
@@ -354,7 +393,11 @@ class RecurrentLongNormalShortBlock(nn.Module):
             global_K, global_V = long_term_memory
             local_K, local_V = short_term_memory
 
-        tgt2 = self.long_term_attn(curr_Q, torch.cat((global_K, curr_K), 0), torch.cat((global_V, curr_V), 0))[0]
+        tgt2 = self.long_term_attn(
+            curr_Q,
+            torch.cat((global_K, curr_K), 0),
+            torch.cat((global_V, curr_V), 0),
+        )[0]
         tgt3 = self.short_term_attn(local_Q, local_K, local_V)[0]
 
         global_K = self.linear_QMem(tgt2)
@@ -371,8 +414,10 @@ class RecurrentLongNormalShortBlock(nn.Module):
 
         tgt = tgt + self.droppath(tgt2)
 
-        return tgt, [[curr_K, curr_V], [global_K, global_V],
-                     [local_K, local_V]]
+        return tgt, [
+            [curr_K, curr_V], [global_K, global_V],
+            [local_K, local_V],
+        ]
 
     def _init_weight(self):
         for p in self.parameters():
@@ -381,17 +426,19 @@ class RecurrentLongNormalShortBlock(nn.Module):
 
 
 class SimplifiedTransformerBlock(nn.Module):
-    def __init__(self,
-                 d_model,
-                 self_nhead,
-                 att_nhead,
-                 dim_feedforward=1024,
-                 droppath=0.1,
-                 activation="gelu",
-                 stopgrad=False,
-                 joint_longatt=False,
-                 linear_q=False,
-                 recurrent_stm=False):
+    def __init__(
+        self,
+        d_model,
+        self_nhead,
+        att_nhead,
+        dim_feedforward=1024,
+        droppath=0.1,
+        activation="gelu",
+        stopgrad=False,
+        joint_longatt=False,
+        linear_q=False,
+        recurrent_stm=False,
+    ):
         super().__init__()
 
         # Self-attention
@@ -409,14 +456,18 @@ class SimplifiedTransformerBlock(nn.Module):
 
         self.linear_KMem = nn.Linear(d_model, d_model)
 
-        self.long_term_attn = MultiheadAttention(d_model,
-                                                 att_nhead,
-                                                 use_linear=False)
-        
+        self.long_term_attn = MultiheadAttention(
+            d_model,
+            att_nhead,
+            use_linear=False,
+        )
+
         if not stopgrad:
-            self.short_term_attn = MultiheadAttention(d_model,
-                                                        att_nhead,
-                                                        use_linear=False)
+            self.short_term_attn = MultiheadAttention(
+                d_model,
+                att_nhead,
+                use_linear=False,
+            )
         else:
             try:
                 import spatial_correlation_sampler
@@ -427,10 +478,12 @@ class SimplifiedTransformerBlock(nn.Module):
                     "Failed to import PyTorch Correlation. For better efficiency, please install it."
                 )
                 MultiheadLocalAttention = MultiheadLocalAttentionV3
-            self.short_term_attn = MultiheadLocalAttention(d_model,
-                                                        att_nhead,
-                                                        dilation=1,
-                                                        use_linear=False)
+            self.short_term_attn = MultiheadLocalAttention(
+                d_model,
+                att_nhead,
+                dilation=1,
+                use_linear=False,
+            )
 
         # Feed-forward
         self.norm3 = _get_norm(d_model)
@@ -452,13 +505,15 @@ class SimplifiedTransformerBlock(nn.Module):
             pos = pos.view(h, w, n, c).permute(2, 3, 0, 1)
         return tensor if pos is None else tensor + pos
 
-    def forward(self,
-                tgt,
-                long_term_memory=None,
-                short_term_memory=None,
-                curr_id_emb=None,
-                self_pos=None,
-                size_2d=(30, 30)):
+    def forward(
+        self,
+        tgt,
+        long_term_memory=None,
+        short_term_memory=None,
+        curr_id_emb=None,
+        self_pos=None,
+        size_2d=(30, 30),
+    ):
 
         # Self-attention
         _tgt = self.norm1(tgt)
@@ -487,25 +542,41 @@ class SimplifiedTransformerBlock(nn.Module):
             local_K, local_V = short_term_memory
 
         if self.joint_longatt:
-            tgt2 = self.long_term_attn(curr_Q, torch.cat((global_K, curr_K), 0), torch.cat((global_V, curr_V), 0))[0]
+            tgt2 = self.long_term_attn(
+                curr_Q,
+                torch.cat((global_K, curr_K), 0),
+                torch.cat((global_V, curr_V), 0),
+            )[0]
         else:
             tgt2 = self.long_term_attn(curr_Q, global_K, global_V)[0]
-        
+
         if self.linear_q:
-            tgt3 = self.short_term_attn(local_Q, torch.cat((local_K, curr_K), 0), torch.cat((local_V, curr_V), 0))[0]
+            tgt3 = self.short_term_attn(
+                local_Q,
+                torch.cat((local_K, curr_K), 0),
+                torch.cat((local_V, curr_V), 0),
+            )[0]
         else:
             if self.stopgrad:
                 K = local_K + curr_K
                 # K = self.norm4(K)
                 V = local_V + curr_V
                 # V = self.norm4(V)
-                tgt3 = self.short_term_attn(seq_to_2d(local_Q, size_2d), seq_to_2d(K, size_2d), seq_to_2d(V, size_2d))[0]
+                tgt3 = self.short_term_attn(
+                    seq_to_2d(local_Q, size_2d),
+                    seq_to_2d(K, size_2d),
+                    seq_to_2d(V, size_2d),
+                )[0]
             else:
-                tgt3 = self.short_term_attn(local_Q, self.norm4(local_K + curr_K), self.norm4(local_V + curr_V))[0]
+                tgt3 = self.short_term_attn(
+                    local_Q,
+                    self.norm4(local_K + curr_K),
+                    self.norm4(local_V + curr_V),
+                )[0]
 
         if self.recurrent_stm:
             _tgt3 = tgt3
-            
+
             local_K = self.linear_QMem(_tgt3)
             local_V = _tgt3
             if curr_id_emb is not None:
@@ -520,8 +591,10 @@ class SimplifiedTransformerBlock(nn.Module):
 
         tgt = tgt + self.droppath(tgt2)
 
-        return tgt, [[curr_K, curr_V], [global_K, global_V],
-                     [local_K, local_V]]
+        return tgt, [
+            [curr_K, curr_V], [global_K, global_V],
+            [local_K, local_V],
+        ]
 
     def _init_weight(self):
         for p in self.parameters():
