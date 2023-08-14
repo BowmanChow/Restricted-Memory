@@ -308,7 +308,6 @@ class Trainer(object):
 
     def prepare_dataset(self):
         cfg = self.cfg
-        # self.enable_prev_frame = cfg.TRAIN_ENABLE_PREV_FRAME
 
         self.print_log('Process dataset...')
         composed_transforms = transforms.Compose([
@@ -335,7 +334,6 @@ class Trainer(object):
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
             )
             train_datasets.append(pretrain_vos_dataset)
-            # self.enable_prev_frame = False
 
         if 'davis2017' in cfg.DATASETS:
             train_davis_dataset = DAVIS2017_Train(

@@ -84,7 +84,6 @@ class DefaultEngineConfig():
         self.TRAIN_RESUME_STEP = 0
         self.TRAIN_AUTO_RESUME = True
         self.TRAIN_DATASET_FULL_RESOLUTION = False
-        self.TRAIN_ENABLE_PREV_FRAME = False
         self.TRAIN_ENCODER_FREEZE_AT = 2
         try:
             self.TRAIN_ENCODER_FREEZE_AT = 4 if self.TOP_DOWN_FREEZE_ENCODER else self.TRAIN_ENCODER_FREEZE_AT
