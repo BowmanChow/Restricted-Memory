@@ -108,11 +108,13 @@ class AOTEngine(nn.Module):
         # pred_loss = torch.cat(curr_losses, dim=0).sum(-1) / (mask.sum(-1) + 0.000001)
 
         loss = aux_weight * aux_loss + pred_loss
-        var_loss = self.AOT.get_var_loss()
-        loss += self.cfg.VAR_LOSS_WEIGHT * var_loss
+        loss_print_text = f"loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_loss}"
+        if hasattr(self.cfg, "VAR_LOSS_WEIGHT"):
+            var_loss = self.AOT.get_var_loss()
+            loss = loss + self.cfg.VAR_LOSS_WEIGHT * var_loss
+            loss_print_text += f" + {self.cfg.VAR_LOSS_WEIGHT} * var_loss {var_loss}  |  frame_num {self.total_offline_frame_num}"
         if step % self.cfg.TRAIN_LOG_STEP == 0:
-            print(f"""\
-loss {loss} = aux_weight {aux_weight} * aux_loss {aux_loss} + pred_loss {pred_loss} + {self.cfg.VAR_LOSS_WEIGHT} * var_loss {var_loss}  |  frame_num {self.total_offline_frame_num}""")
+            print(loss_print_text)
 
         all_pred_mask = aux_masks + curr_masks
 
