@@ -133,25 +133,19 @@ class AOT(nn.Module):
     def LSTT_forward(
         self,
         curr_embs,
-        long_term_memories,
-        short_term_memories,
         curr_id_emb=None,
         pos_emb=None,
         size_2d=(30, 30),
     ):
         n, c, h, w = curr_embs[-1].size()
         curr_emb = curr_embs[-1].view(n, c, h * w).permute(2, 0, 1)
-        lstt_embs, lstt_memories = self.LSTT(
+        lstt_embs = self.LSTT(
             curr_emb,
-            long_term_memories,
-            short_term_memories,
             curr_id_emb,
             pos_emb,
             size_2d,
         )
-        lstt_curr_memories, lstt_long_memories, lstt_short_memories = zip(
-            *lstt_memories)
-        return lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories
+        return lstt_embs
 
     def _init_weight(self):
         nn.init.xavier_uniform_(self.encoder_projector.weight)
@@ -168,3 +162,21 @@ class AOT(nn.Module):
         var_loss = torch.stack(self.__var_losses).mean()
         self.__var_losses = []
         return var_loss
+
+    def init_LSTT_memory(self):
+        self.LSTT.init_memory()
+
+    def clear_LSTT_memory(self):
+        self.LSTT.clear_memory()
+
+    def update_short_term_memory(
+            self,
+            curr_id_emb,
+            short_term_mem_skip,
+            is_update_long_memory,
+    ):
+        self.LSTT.update_short_memories(
+            curr_id_emb=curr_id_emb,
+            short_term_mem_skip=short_term_mem_skip,
+            is_update_long_memory=is_update_long_memory,
+        )

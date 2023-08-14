@@ -282,42 +282,13 @@ class AOTEngine(nn.Module):
         # self matching and propagation
         self.curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
-            None,
-            None,
             curr_id_emb,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
         )
 
-        lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories = self.curr_lstt_output
-
-        if self.long_term_memories is None:
-            self.long_term_memories = lstt_long_memories
-        else:
-            self.update_long_term_memory(lstt_long_memories)
         self.last_mem_step = frame_step
-
-        self.short_term_memories_list = [lstt_short_memories]
-        self.short_term_memories = lstt_short_memories
-
-    def update_long_term_memory(self, new_long_term_memories):
-        if self.cfg.MODEL_RECURRENT_LTM:
-            self.long_term_memories = new_long_term_memories
-            return
-
-        updated_long_term_memories = []
-        max_size = 48840
-        for new_long_term_memory, last_long_term_memory in zip(
-                new_long_term_memories, self.long_term_memories):
-            updated_e = []
-            for new_e, last_e in zip(
-                new_long_term_memory,
-                last_long_term_memory,
-            ):
-                new_mem = torch.cat([new_e, last_e], dim=0)
-                updated_e.append(new_mem)
-            updated_long_term_memories.append(updated_e)
-        self.long_term_memories = updated_long_term_memories
+        self.AOT.init_LSTT_memory()
 
     def update_short_term_memory(self, curr_mask, curr_id_emb=None):
         if curr_id_emb is None:
@@ -330,49 +301,15 @@ class AOTEngine(nn.Module):
             curr_id_emb = self.assign_identity(
                 curr_one_hot_mask, curr_ignore_mask)
 
-        lstt_short_memories = self.curr_lstt_output[3]
-        lstt_curr_inputs = self.curr_lstt_output[1]
-        lstt_curr_memories_2d = []
-        for layer_idx in range(len(lstt_curr_inputs)):
-            curr_v = lstt_curr_inputs[layer_idx][1]
-            curr_v = self.AOT.LSTT.layers[layer_idx].linear_V(
-                curr_v + curr_id_emb)
-            lstt_curr_inputs[layer_idx][1] = curr_v
-
-            if self.cfg.MODEL_RECURRENT_STM:
-                curr_v = lstt_short_memories[layer_idx][1]
-                curr_v = self.AOT.LSTT.layers[layer_idx].linear_VMem(
-                    curr_v + curr_id_emb)
-                lstt_short_memories[layer_idx][1] = curr_v
-            else:
-                lstt_short_memories[layer_idx][0] = lstt_curr_inputs[layer_idx][0]
-                lstt_short_memories[layer_idx][1] = lstt_curr_inputs[layer_idx][1]
-
-            if self.cfg.MODEL_SIMPLIFIED_STM:
-                lstt_curr_memories_2d.append([
-                    lstt_short_memories[layer_idx][0],
-                    lstt_short_memories[layer_idx][1],
-                ])
-            else:
-                lstt_curr_memories_2d.append([
-                    seq_to_2d(
-                        lstt_short_memories[layer_idx][0], self.enc_size_2d),
-                    seq_to_2d(
-                        lstt_short_memories[layer_idx][1], self.enc_size_2d),
-                ])
-
-        self.short_term_memories_list.append(lstt_curr_memories_2d)
-        for temp in self.short_term_memories_list[0]:
-            for x in temp:
-                x.cpu()
-        self.short_term_memories_list = self.short_term_memories_list[
-            -self.short_term_mem_skip:]
-        # print(len(self.short_term_memories_list))
-        self.short_term_memories = self.short_term_memories_list[0]
-
+        is_update_long_memory = False
         if self.frame_step - self.last_mem_step >= self.long_term_mem_gap:
-            self.update_long_term_memory(lstt_curr_inputs)
+            is_update_long_memory = True
             self.last_mem_step = self.frame_step
+        self.AOT.update_short_term_memory(
+            curr_id_emb=curr_id_emb,
+            short_term_mem_skip=self.short_term_mem_skip,
+            is_update_long_memory=is_update_long_memory,
+        )
 
     def match_propogate_one_frame(self, img=None, img_embs=None, mask=None):
         self.frame_step += 1
@@ -391,8 +328,6 @@ class AOTEngine(nn.Module):
 
         self.curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
-            self.long_term_memories,
-            self.short_term_memories,
             None,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
@@ -400,7 +335,7 @@ class AOTEngine(nn.Module):
 
     def decode_current_logits(self, output_size=None):
         curr_enc_embs = self.curr_enc_embs
-        curr_lstt_embs = self.curr_lstt_output[0]
+        curr_lstt_embs = self.curr_lstt_output
 
         pred_id_logits = self.AOT.decode_id_logits(
             curr_lstt_embs,
@@ -511,10 +446,7 @@ class AOTEngine(nn.Module):
         self.enc_hw = None
         self.input_size_2d = None
 
-        self.long_term_memories = None
-        self.short_term_memories_list = []
-        self.short_term_memories = None
-
+        self.AOT.clear_LSTT_memory()
         self.enable_offline_enc = False
         self.offline_enc_embs = None
         self.offline_one_hot_masks = None

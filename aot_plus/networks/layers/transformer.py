@@ -111,11 +111,15 @@ class LongShortTermTransformer(nn.Module):
         if self.decoder_norms is not None:
             self.decoder_norms = nn.ModuleList(self.decoder_norms)
 
+        self.simplified = simplified
+        self.recurrent_stm = recurrent_stm
+        self.recurrent_ltm = recurrent_ltm
+
+        self.clear_memory()
+
     def forward(
         self,
         tgt,
-        long_term_memories,
-        short_term_memories,
         curr_id_emb=None,
         self_pos=None,
         size_2d=None,
@@ -129,14 +133,15 @@ class LongShortTermTransformer(nn.Module):
         for idx, layer in enumerate(self.layers):
             output, memories = layer(
                 output,
-                long_term_memories[idx] if
-                long_term_memories is not None else None,
-                short_term_memories[idx] if
-                short_term_memories is not None else None,
+                self.long_term_memories[idx] if
+                self.long_term_memories is not None else None,
+                self.short_term_memories[idx] if
+                self.short_term_memories is not None else None,
                 curr_id_emb=curr_id_emb,
                 self_pos=self_pos,
                 size_2d=size_2d,
             )
+            # memories : [[curr_K, curr_V], [global_K, global_V], [local_K, local_V]]
 
             if self.return_intermediate:
                 intermediate.append(output)
@@ -156,9 +161,85 @@ class LongShortTermTransformer(nn.Module):
                             intermediate[idx])
 
         if self.return_intermediate:
-            return intermediate, intermediate_memories
+            self.lstt_curr_memories, self.lstt_long_memories, self.lstt_short_memories = zip(
+                *intermediate_memories)
+            return intermediate
 
-        return output, memories
+        return output
+
+    def update_short_memories(self, curr_id_emb, short_term_mem_skip, is_update_long_memory):
+        lstt_curr_memories_2d = []
+        for layer_idx in range(len(self.lstt_curr_memories)):
+            curr_v = self.lstt_curr_memories[layer_idx][1]
+            curr_v = self.layers[layer_idx].linear_V(
+                curr_v + curr_id_emb)
+            self.lstt_curr_memories[layer_idx][1] = curr_v
+
+            if self.recurrent_stm:
+                curr_v = self.lstt_short_memories[layer_idx][1]
+                curr_v = self.layers[layer_idx].linear_VMem(
+                    curr_v + curr_id_emb)
+                self.lstt_short_memories[layer_idx][1] = curr_v
+            else:
+                self.lstt_short_memories[layer_idx][0] = self.lstt_curr_memories[layer_idx][0]
+                self.lstt_short_memories[layer_idx][1] = self.lstt_curr_memories[layer_idx][1]
+
+            if self.simplified:
+                lstt_curr_memories_2d.append([
+                    self.lstt_short_memories[layer_idx][0],
+                    self.lstt_short_memories[layer_idx][1],
+                ])
+            else:
+                lstt_curr_memories_2d.append([
+                    seq_to_2d(
+                        self.lstt_short_memories[layer_idx][0], self.enc_size_2d),
+                    seq_to_2d(
+                        self.lstt_short_memories[layer_idx][1], self.enc_size_2d),
+                ])
+
+        self.short_term_memories_list.append(lstt_curr_memories_2d)
+        for temp in self.short_term_memories_list[0]:
+            for x in temp:
+                x.cpu()
+        self.short_term_memories_list = self.short_term_memories_list[
+            -short_term_mem_skip:]
+        self.short_term_memories = self.short_term_memories_list[0]
+
+        if is_update_long_memory:
+            self.update_long_term_memory(self.lstt_curr_memories)
+
+    def update_long_term_memory(self, new_long_term_memories):
+        if self.recurrent_ltm:
+            self.long_term_memories = new_long_term_memories
+            return
+
+        updated_long_term_memories = []
+        max_size = 48840
+        for new_long_term_memory, last_long_term_memory in zip(
+                new_long_term_memories, self.long_term_memories):
+            updated_e = []
+            for new_e, last_e in zip(
+                new_long_term_memory,
+                last_long_term_memory,
+            ):
+                new_mem = torch.cat([new_e, last_e], dim=0)
+                updated_e.append(new_mem)
+            updated_long_term_memories.append(updated_e)
+        self.long_term_memories = updated_long_term_memories
+
+    def init_memory(self):
+        self.long_term_memories = self.lstt_long_memories
+        self.short_term_memories_list = [self.lstt_short_memories]
+        self.short_term_memories = self.lstt_short_memories
+
+    def clear_memory(self):
+        self.lstt_curr_memories = None
+        self.lstt_long_memories = None
+        self.lstt_short_memories = None
+
+        self.short_term_memories_list = []
+        self.short_term_memories = None
+        self.long_term_memories = None
 
 
 class LongShortTermTransformerBlock(nn.Module):
