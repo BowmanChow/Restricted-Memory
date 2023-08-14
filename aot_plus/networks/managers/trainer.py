@@ -91,9 +91,10 @@ class Trainer(object):
 
         print("Use GPU {} for training VOS.".format(self.gpu))
         torch.cuda.set_device(self.gpu)
-        torch.backends.cudnn.benchmark = True if cfg.DATA_RANDOMCROP[
-            0] == cfg.DATA_RANDOMCROP[
-                1] and 'swin' not in cfg.MODEL_ENCODER else False
+        torch.backends.cudnn.benchmark = True if \
+            cfg.DATA_RANDOMCROP[0] == cfg.DATA_RANDOMCROP[1] \
+            and 'swin' not in cfg.MODEL_ENCODER \
+            else False
 
         self.print_log('Build VOS model.')
 
@@ -105,7 +106,8 @@ class Trainer(object):
             'train',
             aot_model=self.model,
             gpu_id=self.gpu,
-            long_term_mem_gap=cfg.TRAIN_LONG_TERM_MEM_GAP)
+            long_term_mem_gap=cfg.TRAIN_LONG_TERM_MEM_GAP,
+        )
 
         if cfg.MODEL_FREEZE_BACKBONE:
             print(f"Freeze Model Encoder !")
@@ -114,11 +116,13 @@ class Trainer(object):
 
         if cfg.DIST_ENABLE:
             print(f"Enable Dist !")
-            dist.init_process_group(backend=cfg.DIST_BACKEND,
-                                    init_method=cfg.DIST_URL,
-                                    world_size=cfg.TRAIN_GPUS,
-                                    rank=rank,
-                                    timeout=datetime.timedelta(seconds=300))
+            dist.init_process_group(
+                backend=cfg.DIST_BACKEND,
+                init_method=cfg.DIST_URL,
+                world_size=cfg.TRAIN_GPUS,
+                rank=rank,
+                timeout=datetime.timedelta(seconds=300),
+            )
 
             self.model.encoder = nn.SyncBatchNorm.convert_sync_batchnorm(
                 self.model.encoder).cuda(self.gpu)
@@ -128,7 +132,8 @@ class Trainer(object):
                 device_ids=[self.gpu],
                 output_device=self.gpu,
                 find_unused_parameters=True,
-                broadcast_buffers=False)
+                broadcast_buffers=False,
+            )
         else:
             self.dist_engine = self.engine
 
@@ -150,8 +155,10 @@ class Trainer(object):
                 ema_decay = 1. - 1. / (total_steps * cfg.TRAIN_EMA_RATIO)
                 self.ema_params = get_param_buffer_for_ema(
                     self.model, update_buffer=(not cfg.MODEL_FREEZE_BN))
-                self.ema = ExponentialMovingAverage(self.ema_params,
-                                                    decay=ema_decay)
+                self.ema = ExponentialMovingAverage(
+                    self.ema_params,
+                    decay=ema_decay,
+                )
                 self.ema_dir = cfg.DIR_EMA_CKPT
             except Exception as inst:
                 self.print_log(inst)
@@ -165,17 +172,22 @@ class Trainer(object):
             use_frozen_bn=self.use_frozen_bn,
             weight_decay=cfg.TRAIN_WEIGHT_DECAY,
             exclusive_wd_dict=cfg.TRAIN_WEIGHT_DECAY_EXCLUSIVE,
-            no_wd_keys=cfg.TRAIN_WEIGHT_DECAY_EXEMPTION)
+            no_wd_keys=cfg.TRAIN_WEIGHT_DECAY_EXEMPTION,
+        )
 
         if cfg.TRAIN_OPT == 'sgd':
-            self.optimizer = optim.SGD(trainable_params,
-                                       lr=cfg.TRAIN_LR,
-                                       momentum=cfg.TRAIN_SGD_MOMENTUM,
-                                       nesterov=True)
+            self.optimizer = optim.SGD(
+                trainable_params,
+                lr=cfg.TRAIN_LR,
+                momentum=cfg.TRAIN_SGD_MOMENTUM,
+                nesterov=True,
+            )
         else:
-            self.optimizer = optim.AdamW(trainable_params,
-                                         lr=cfg.TRAIN_LR,
-                                         weight_decay=cfg.TRAIN_WEIGHT_DECAY)
+            self.optimizer = optim.AdamW(
+                trainable_params,
+                lr=cfg.TRAIN_LR,
+                weight_decay=cfg.TRAIN_WEIGHT_DECAY,
+            )
         print(f"Use optimizer {type(self.optimizer).__name__} ")
 
         self.enable_amp = enable_amp
@@ -217,7 +229,8 @@ class Trainer(object):
                 try:
                     ema_ckpt_dir = os.path.join(
                         self.ema_dir,
-                        'save_step_%s.pth' % (cfg.TRAIN_RESUME_CKPT))
+                        'save_step_%s.pth' % (cfg.TRAIN_RESUME_CKPT),
+                    )
                     ema_model, removed_dict = load_network(
                         self.model, ema_ckpt_dir, self.gpu)
                     if len(removed_dict) > 0:
@@ -228,8 +241,10 @@ class Trainer(object):
 
                     ema_params = get_param_buffer_for_ema(
                         ema_model, update_buffer=(not cfg.MODEL_FREEZE_BN))
-                    self.ema = ExponentialMovingAverage(ema_params,
-                                                        decay=ema_decay)
+                    self.ema = ExponentialMovingAverage(
+                        ema_params,
+                        decay=ema_decay,
+                    )
                     self.ema.num_updates = cfg.TRAIN_RESUME_CKPT
                 except Exception as inst:
                     self.print_log(inst)
@@ -243,18 +258,21 @@ class Trainer(object):
                     self.optimizer,
                     resume_ckpt,
                     self.gpu,
-                    scaler=self.scaler)
+                    scaler=self.scaler,
+                )
             except Exception as inst:
                 self.print_log(inst)
                 resume_ckpt = os.path.join(
                     'saved_models',
-                    'save_step_%s.pth' % (cfg.TRAIN_RESUME_CKPT))
+                    'save_step_%s.pth' % (cfg.TRAIN_RESUME_CKPT),
+                )
                 self.model, self.optimizer, removed_dict = load_network_and_optimizer(
                     self.model,
                     self.optimizer,
                     resume_ckpt,
                     self.gpu,
-                    scaler=self.scaler)
+                    scaler=self.scaler,
+                )
 
             if len(removed_dict) > 0:
                 self.print_log(
@@ -281,8 +299,9 @@ class Trainer(object):
                 model_encoder, removed_dict = load_network(
                     self.model_encoder, cfg.MODEL_ENCODER_PRETRAIN, self.gpu)
                 if len(removed_dict) > 0:
-                    self.print_log('Remove {} from pretrained model.'.format(
-                        removed_dict))
+                    self.print_log(
+                        'Remove {} from pretrained model.'.format(
+                            removed_dict))
                 self.print_log(
                     'Load pretrained backbone model from {}.'.format(
                         cfg.PRETRAIN_MODEL))
@@ -293,13 +312,17 @@ class Trainer(object):
 
         self.print_log('Process dataset...')
         composed_transforms = transforms.Compose([
-            tr.RandomScale(cfg.DATA_MIN_SCALE_FACTOR,
-                           cfg.DATA_MAX_SCALE_FACTOR, cfg.DATA_SHORT_EDGE_LEN),
-            tr.BalancedRandomCrop(cfg.DATA_RANDOMCROP,
-                                  max_obj_num=cfg.MODEL_MAX_OBJ_NUM),
+            tr.RandomScale(
+                cfg.DATA_MIN_SCALE_FACTOR,
+                cfg.DATA_MAX_SCALE_FACTOR, cfg.DATA_SHORT_EDGE_LEN,
+            ),
+            tr.BalancedRandomCrop(
+                cfg.DATA_RANDOMCROP,
+                max_obj_num=cfg.MODEL_MAX_OBJ_NUM,
+            ),
             tr.RandomHorizontalFlip(cfg.DATA_RANDOMFLIP),
             tr.Resize(cfg.DATA_RANDOMCROP, use_padding=True),
-            tr.ToTensor()
+            tr.ToTensor(),
         ])
 
         train_datasets = []
@@ -309,7 +332,8 @@ class Trainer(object):
                 cfg.DATA_RANDOMCROP,
                 seq_len=cfg.DATA_SEQ_LEN,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
-                max_obj_n=cfg.MODEL_MAX_OBJ_NUM)
+                max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
+            )
             train_datasets.append(pretrain_vos_dataset)
             self.enable_prev_frame = False
 
@@ -324,9 +348,10 @@ class Trainer(object):
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
                 enable_prev_frame=self.enable_prev_frame,
-                max_obj_n=cfg.MODEL_MAX_OBJ_NUM)
+                max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
+            )
             train_datasets.append(train_davis_dataset)
-        
+
         if 'vost' in cfg.DATASETS:
             train_vost_dataset = VOST_Train(
                 root=cfg.DIR_VOST,
@@ -339,9 +364,10 @@ class Trainer(object):
                 enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
                 ignore_thresh=cfg.DATA_VOST_IGNORE_THRESH,
-                ignore_in_merge=cfg.IGNORE_IN_MERGE)
+                ignore_in_merge=cfg.IGNORE_IN_MERGE,
+            )
             train_datasets.append(train_vost_dataset)
-        
+
         if 'visor' in cfg.DATASETS:
             train_vost_dataset = VISOR_Train(
                 root=cfg.DIR_VISOR,
@@ -353,7 +379,8 @@ class Trainer(object):
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
                 enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
-                ignore_thresh=cfg.DATA_VISOR_IGNORE_THRESH)
+                ignore_thresh=cfg.DATA_VISOR_IGNORE_THRESH,
+            )
             train_datasets.append(train_vost_dataset)
 
         if 'youtubevos' in cfg.DATASETS:
@@ -365,12 +392,15 @@ class Trainer(object):
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
                 enable_prev_frame=self.enable_prev_frame,
-                max_obj_n=cfg.MODEL_MAX_OBJ_NUM)
+                max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
+            )
             train_datasets.append(train_ytb_dataset)
 
         if 'test' in cfg.DATASETS:
-            test_dataset = TEST(transform=composed_transforms,
-                                seq_len=cfg.DATA_SEQ_LEN)
+            test_dataset = TEST(
+                transform=composed_transforms,
+                seq_len=cfg.DATA_SEQ_LEN,
+            )
             train_datasets.append(test_dataset)
 
         if len(train_datasets) > 1:
@@ -384,15 +414,16 @@ class Trainer(object):
 
         self.train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_dataset)
-        self.train_loader = DataLoader(train_dataset,
-                                       batch_size=int(cfg.TRAIN_BATCH_SIZE /
-                                                      cfg.TRAIN_GPUS),
-                                       shuffle=False,
-                                       num_workers=cfg.DATA_WORKERS,
-                                       pin_memory=True,
-                                       sampler=self.train_sampler,
-                                       drop_last=True,
-                                       prefetch_factor=4)
+        self.train_loader = DataLoader(
+            train_dataset,
+            batch_size=int(cfg.TRAIN_BATCH_SIZE / cfg.TRAIN_GPUS),
+            shuffle=False,
+            num_workers=cfg.DATA_WORKERS,
+            pin_memory=True,
+            sampler=self.train_sampler,
+            drop_last=True,
+            prefetch_factor=4,
+        )
 
         self.print_log('Process dataset Done!')
 
@@ -425,33 +456,57 @@ class Trainer(object):
 
         vids = []
         for i in range(len(sample['ref_img'])):
-            ref_img = sample['ref_img'][i].unsqueeze(0).numpy()  # batch_size * 3 * h * w
-            ref_img = np.clip(((ref_img * sigma + mean) * 255.), 0, 255).astype(np.uint8)
+            ref_img = sample['ref_img'][i].\
+                unsqueeze(0).numpy()  # batch_size * 3 * h * w
+            ref_img = np.clip(
+                ((ref_img * sigma + mean) * 255.),
+                0, 255,
+            ).astype(np.uint8)
             prev_img = sample['prev_img'][i].unsqueeze(0).numpy()
-            prev_img = np.clip(((prev_img * sigma + mean) * 255.), 0, 255).astype(np.uint8)
-            curr_imgs = [img[i].unsqueeze(0).numpy() for img in sample['curr_img']]
+            prev_img = np.clip(
+                ((prev_img * sigma + mean) * 255.), 0, 255,
+            ).astype(np.uint8)
+            curr_imgs = [
+                img[i].unsqueeze(0).numpy()
+                for img in sample['curr_img']]
 
-            ref_label = sample['ref_label'][i].numpy()  # batch_size * 1 * h * w
-            
-            ref_img = self.overlay(ref_img[0].transpose(1, 2, 0), ref_label.squeeze(), color_palette).transpose(2, 0, 1)
+            # batch_size * 1 * h * w
+            ref_label = sample['ref_label'][i].numpy()
+
+            ref_img = self.overlay(
+                ref_img[0].transpose(1, 2, 0,),
+                ref_label.squeeze(),
+                color_palette,
+            ).transpose(2, 0, 1)
             ref_img = np.expand_dims(ref_img, axis=0)
             prev_label = sample['prev_label'][i].numpy()
-            prev_img = self.overlay(prev_img[0].transpose(1, 2, 0), prev_label.squeeze(), color_palette).transpose(2, 0, 1)
+            prev_img = self.overlay(
+                prev_img[0].transpose(1, 2, 0),
+                prev_label.squeeze(),
+                color_palette,
+            ).transpose(2, 0, 1)
             prev_img = np.expand_dims(prev_img, axis=0)
-            curr_labels = [lbl[i].numpy() for lbl in sample['curr_label']]
+            curr_labels = [
+                lbl[i].numpy()
+                for lbl in sample['curr_label']]
 
-            vid = np.concatenate((ref_img, prev_img), axis = 0)
+            vid = np.concatenate((ref_img, prev_img), axis=0)
 
             for curr_img, curr_lbl in zip(curr_imgs, curr_labels):
-                curr_img = np.clip(((curr_img * sigma + mean) * 255.), 0, 255).astype(np.uint8)
-                curr_img = self.overlay(curr_img[0].transpose(1, 2, 0), curr_lbl.squeeze(), color_palette).transpose(2, 0, 1)
+                curr_img = np.clip(
+                    ((curr_img * sigma + mean) * 255.), 0, 255).astype(np.uint8)
+                curr_img = self.overlay(
+                    curr_img[0].transpose(1, 2, 0),
+                    curr_lbl.squeeze(),
+                    color_palette,
+                ).transpose(2, 0, 1)
                 curr_img = np.expand_dims(curr_img, axis=0)
-                vid = np.concatenate((vid, curr_img), axis = 0)
+                vid = np.concatenate((vid, curr_img), axis=0)
             vids.append(vid)
 
         all_vids = vids[0]
         for i in range(1, len(vids)):
-            all_vids = np.concatenate((all_vids, vids[i]), axis = 2)
+            all_vids = np.concatenate((all_vids, vids[i]), axis=2)
         return all_vids
 
     def sequential_training(self):
@@ -483,8 +538,8 @@ class Trainer(object):
         step = self.step
         epoch = self.epoch
         max_itr = cfg.TRAIN_TOTAL_STEPS
-        start_seq_training_step = int(cfg.TRAIN_SEQ_TRAINING_START_RATIO *
-                                      max_itr)
+        start_seq_training_step = int(
+            cfg.TRAIN_SEQ_TRAINING_START_RATIO * max_itr)
         use_prev_prob = cfg.MODEL_USE_PREV_PROB
 
         self.print_log('Start training:')
@@ -495,7 +550,8 @@ class Trainer(object):
             last_time = time.time()
             for frame_idx, sample in enumerate(train_loader):
                 if step > cfg.TRAIN_TOTAL_STEPS:
-                    print(f"{step = } is larger than {cfg.TRAIN_TOTAL_STEPS = }, Break !")
+                    print(
+                        f"{step = } is larger than {cfg.TRAIN_TOTAL_STEPS = }, Break !")
                     break
 
                 if step % cfg.TRAIN_TBLOG_STEP == 0 and self.rank == 0 and cfg.TRAIN_TBLOG:
@@ -522,7 +578,8 @@ class Trainer(object):
                         is_cosine_decay=cfg.TRAIN_LR_COSINE_DECAY,
                         min_lr=cfg.TRAIN_LR_MIN,
                         encoder_lr_ratio=cfg.TRAIN_LR_ENCODER_RATIO,
-                        freeze_params=freeze_params)
+                        freeze_params=freeze_params,
+                    )
 
                 ref_imgs = sample['ref_img']  # batch_size * 3 * h * w
                 prev_imgs = sample['prev_img']
@@ -550,10 +607,17 @@ class Trainer(object):
 
                 batch_size = ref_imgs.size(0)
 
-                all_frames = torch.cat([ref_imgs, prev_imgs] + curr_imgs,
-                                       dim=0)
-                all_labels = torch.cat([ref_labels, prev_labels] + curr_labels,
-                                       dim=0)
+                all_frames = torch.cat(
+                    [ref_imgs, prev_imgs] + curr_imgs,
+                    dim=0,
+                )
+                all_labels = torch.cat(
+                    [ref_labels, prev_labels] + curr_labels,
+                    dim=0,
+                )
+                if step % cfg.TRAIN_LOG_STEP == 0:
+                    print(f"{frame_idx = }  {sample['meta'] = }")
+                    print(f"{all_frames.shape = }  {all_labels.shape = }")
 
                 self.engine.restart_engine(batch_size, True)
                 optimizer.zero_grad(set_to_none=True)
@@ -570,13 +634,16 @@ class Trainer(object):
                             step=step,
                             tf_board=tf_board,
                             enable_prev_frame=self.enable_prev_frame,
-                            use_prev_prob=use_prev_prob)
+                            use_prev_prob=use_prev_prob,
+                        )
                         loss = torch.mean(loss)
 
                     self.scaler.scale(loss).backward()
                     self.scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(),
-                                                   cfg.TRAIN_CLIP_GRAD_NORM)
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(),
+                        cfg.TRAIN_CLIP_GRAD_NORM,
+                    )
                     self.scaler.step(optimizer)
                     self.scaler.update()
                 else:
@@ -589,11 +656,14 @@ class Trainer(object):
                         step=step,
                         tf_board=tf_board,
                         enable_prev_frame=self.enable_prev_frame,
-                        use_prev_prob=use_prev_prob)
+                        use_prev_prob=use_prev_prob,
+                    )
                     loss = torch.mean(loss)
 
-                    torch.nn.utils.clip_grad_norm_(model.parameters(),
-                                                   cfg.TRAIN_CLIP_GRAD_NORM)
+                    torch.nn.utils.clip_grad_norm_(
+                        model.parameters(),
+                        cfg.TRAIN_CLIP_GRAD_NORM,
+                    )
                     loss.backward()
                     optimizer.step()
 
@@ -604,8 +674,11 @@ class Trainer(object):
                     # frame_mask = (frame_loss > 0).float()
                     # now_loss = frame_loss.sum() / (frame_mask.sum() + 0.000001)
                     now_loss = torch.mean(all_loss[idx].detach())
-                    now_iou = pytorch_iou(now_pred.unsqueeze(1), now_label,
-                                          obj_nums) * 100
+                    now_iou = pytorch_iou(
+                        now_pred.unsqueeze(1),
+                        now_label,
+                        obj_nums,
+                    ) * 100
                     dist.all_reduce(now_loss)
                     dist.all_reduce(now_iou)
                     now_loss /= self.gpu_num
@@ -623,12 +696,18 @@ class Trainer(object):
                     last_time = curr_time
 
                     if step % cfg.TRAIN_TBLOG_STEP == 0:
-                        log_outputs = {"train_losss": now_loss.cpu(), 'lr': now_lr, 'iou': now_iou.item()}
+                        log_outputs = {
+                            "train_losss": now_loss.cpu(),
+                            'lr': now_lr,
+                            'iou': now_iou.item(),
+                        }
                         all_f = [ref_imgs, prev_imgs] + curr_imgs
-                        self.process_log(ref_imgs, all_f[-2], all_f[-1],
-                                         ref_labels, all_pred[-2], now_label,
-                                         now_pred, boards, running_losses,
-                                         running_ious, now_lr, step)
+                        self.process_log(
+                            ref_imgs, all_f[-2], all_f[-1],
+                            ref_labels, all_pred[-2], now_label,
+                            now_pred, boards, running_losses,
+                            running_ious, now_lr, step,
+                        )
 
                     if step % cfg.TRAIN_LOG_STEP == 0:
                         strs = 'I:{}, LR:{:.5f}, T:{:.1f}({:.1f})s, Obj:{:.1f}({:.1f})'.format(
@@ -655,17 +734,21 @@ class Trainer(object):
                         device=self.gpu) / (1024.**3)
                     ETA = str(
                         datetime.timedelta(
-                            seconds=int(batch_time.moving_avg *
-                                        (cfg.TRAIN_TOTAL_STEPS - step))))
+                            seconds=int(
+                                batch_time.moving_avg *
+                                (cfg.TRAIN_TOTAL_STEPS - step)
+                            )))
                     self.print_log('ETA: {}, Max Mem: {:.2f}G.'.format(
                         ETA, max_mem))
                     self.print_log('Save CKPT (Step {}).'.format(step))
-                    save_network(self.model,
-                                 optimizer,
-                                 step,
-                                 cfg.DIR_CKPT,
-                                 cfg.TRAIN_MAX_KEEP_CKPT,
-                                 scaler=self.scaler)
+                    save_network(
+                        self.model,
+                        optimizer,
+                        step,
+                        cfg.DIR_CKPT,
+                        cfg.TRAIN_MAX_KEEP_CKPT,
+                        scaler=self.scaler,
+                    )
                     try:
                         torch.cuda.empty_cache()
                         # First save original parameters before replacing with EMA version
@@ -673,13 +756,15 @@ class Trainer(object):
                         # Copy EMA parameters to model
                         self.ema.copy_to(self.ema_params)
                         # Save EMA model
-                        save_network(self.model,
-                                     optimizer,
-                                     step,
-                                     self.ema_dir,
-                                     cfg.TRAIN_MAX_KEEP_CKPT,
-                                     backup_dir='./saved_ema_models',
-                                     scaler=self.scaler)
+                        save_network(
+                            self.model,
+                            optimizer,
+                            step,
+                            self.ema_dir,
+                            cfg.TRAIN_MAX_KEEP_CKPT,
+                            backup_dir='./saved_ema_models',
+                            scaler=self.scaler,
+                        )
                         # Restore original parameters to resume training later
                         self.ema.restore(self.ema_params)
                     except Exception as inst:
@@ -692,9 +777,11 @@ class Trainer(object):
         if self.rank == 0:
             print(string)
 
-    def process_log(self, ref_imgs, prev_imgs, curr_imgs, ref_labels,
-                    prev_labels, curr_labels, curr_pred, boards,
-                    running_losses, running_ious, now_lr, step):
+    def process_log(
+        self, ref_imgs, prev_imgs, curr_imgs, ref_labels,
+        prev_labels, curr_labels, curr_pred, boards,
+        running_losses, running_ious, now_lr, step,
+    ):
         cfg = self.cfg
 
         mean = np.array([[[0.485]], [[0.456]], [[0.406]]])
@@ -717,45 +804,69 @@ class Trainer(object):
 
         if cfg.TRAIN_IMG_LOG or cfg.TRAIN_TBLOG:
 
-            show_ref_img = masked_image(show_ref_img, show_ref_gtf,
-                                        show_ref_gt)
+            show_ref_img = masked_image(
+                show_ref_img, show_ref_gtf,
+                show_ref_gt,
+            )
             if cfg.TRAIN_IMG_LOG:
                 save_image(
                     show_ref_img,
-                    os.path.join(cfg.DIR_IMG_LOG,
-                                 '%06d_ref_img.jpeg' % (step)))
+                    os.path.join(
+                        cfg.DIR_IMG_LOG,
+                        '%06d_ref_img.jpeg' % (step),
+                    ),
+                )
 
-            show_prev_img = masked_image(show_prev_img, show_prev_gtf,
-                                         show_prev_gt)
+            show_prev_img = masked_image(
+                show_prev_img, show_prev_gtf,
+                show_prev_gt,
+            )
             if cfg.TRAIN_IMG_LOG:
                 save_image(
                     show_prev_img,
-                    os.path.join(cfg.DIR_IMG_LOG,
-                                 '%06d_prev_img.jpeg' % (step)))
+                    os.path.join(
+                        cfg.DIR_IMG_LOG,
+                        '%06d_prev_img.jpeg' % (step),
+                    ),
+                )
 
-            show_img_pred = masked_image(show_curr_img, show_preds_sf,
-                                         show_preds_s)
+            show_img_pred = masked_image(
+                show_curr_img, show_preds_sf,
+                show_preds_s,
+            )
             if cfg.TRAIN_IMG_LOG:
                 save_image(
                     show_img_pred,
-                    os.path.join(cfg.DIR_IMG_LOG,
-                                 '%06d_prediction.jpeg' % (step)))
+                    os.path.join(
+                        cfg.DIR_IMG_LOG,
+                        '%06d_prediction.jpeg' % (step),
+                    ),
+                )
 
             show_curr_img = masked_image(show_curr_img, show_gtf, show_gt)
             if cfg.TRAIN_IMG_LOG:
                 save_image(
                     show_curr_img,
-                    os.path.join(cfg.DIR_IMG_LOG,
-                                 '%06d_groundtruth.jpeg' % (step)))
+                    os.path.join(
+                        cfg.DIR_IMG_LOG,
+                        '%06d_groundtruth.jpeg' % (step),
+                    ),
+                )
 
             if cfg.TRAIN_TBLOG:
                 for seq_step, running_loss, running_iou in zip(
                         range(len(running_losses)), running_losses,
                         running_ious):
-                    self.tblogger.add_scalar('S{}/Loss'.format(seq_step),
-                                             running_loss.avg, step)
-                    self.tblogger.add_scalar('S{}/IoU'.format(seq_step),
-                                             running_iou.avg, step)
+                    self.tblogger.add_scalar(
+                        'S{}/Loss'.format(seq_step),
+                        running_loss.avg,
+                        step,
+                    )
+                    self.tblogger.add_scalar(
+                        'S{}/IoU'.format(seq_step),
+                        running_iou.avg,
+                        step,
+                    )
 
                 self.tblogger.add_scalar('LR', now_lr, step)
                 self.tblogger.add_image('Ref/Image', show_ref_img, step)
@@ -773,12 +884,14 @@ class Trainer(object):
                 for key in boards['image'].keys():
                     tmp = boards['image'][key]
                     for seq_step in range(len(tmp)):
-                        self.tblogger.add_image('S{}/'.format(seq_step) + key, tmp[seq_step].detach().cpu().numpy(), step)
+                        self.tblogger.add_image(
+                            'S{}/'.format(seq_step) + key, tmp[seq_step].detach().cpu().numpy(), step)
                 for key in boards['scalar'].keys():
                     tmp = boards['scalar'][key]
                     for seq_step in range(len(tmp)):
-                        self.tblogger.add_scalar('S{}/'.format(seq_step) + key, tmp[seq_step].detach().cpu().numpy(), step)
-                        
+                        self.tblogger.add_scalar(
+                            'S{}/'.format(seq_step) + key, tmp[seq_step].detach().cpu().numpy(), step)
+
                 self.tblogger.flush()
 
         del (boards)
