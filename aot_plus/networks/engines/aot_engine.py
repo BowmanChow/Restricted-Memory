@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from typing import Dict,List
+from typing import Dict, List
 
 from utils.math import generate_permute_matrix
 from utils.image import one_hot_mask
@@ -13,11 +13,13 @@ from networks.models.aot import AOT
 
 
 class AOTEngine(nn.Module):
-    def __init__(self,
-                 aot_model: AOT,
-                 gpu_id=0,
-                 long_term_mem_gap=9999,
-                 short_term_mem_skip=1):
+    def __init__(
+        self,
+        aot_model: AOT,
+        gpu_id=0,
+        long_term_mem_gap=9999,
+        short_term_mem_skip=1,
+    ):
         super().__init__()
 
         self.cfg = aot_model.cfg
@@ -32,32 +34,43 @@ class AOTEngine(nn.Module):
 
         self.restart_engine()
 
-    def forward(self,
-                all_frames,
-                all_masks,
-                batch_size,
-                obj_nums,
-                step=0,
-                tf_board=False,
-                use_prev_pred=False,
-                enable_prev_frame=False,
-                use_prev_prob=False):  # only used for training
+    def forward(
+        self,
+        all_frames,
+        all_masks,
+        batch_size,
+        obj_nums,
+        step=0,
+        tf_board=False,
+        use_prev_pred=False,
+        enable_prev_frame=False,
+        use_prev_prob=False,
+    ):  # only used for training
         if self.losses is None:
             self._init_losses()
 
         self.freeze_id = True if use_prev_pred else False
-        aux_weight = self.aux_weight * max(self.aux_step - step,
-                                           0.) / self.aux_step
+        aux_weight = self.aux_weight * max(
+            self.aux_step - step, 0.) / self.aux_step
 
         if hasattr(self.cfg, "PREV_PROBE") and self.cfg.PREV_PROBE:
-            self.split_all_frames = torch.split(all_frames, self.batch_size, dim=0)
+            self.split_all_frames = torch.split(
+                all_frames, self.batch_size, dim=0)
             self.generate_offline_masks(all_masks)
             self.total_offline_frame_num = len(self.offline_masks)
-            self.add_reference_frame(img=self.split_all_frames[self.frame_step], mask=self.offline_masks[self.frame_step], frame_step=0, obj_nums=obj_nums)
+            self.add_reference_frame(
+                img=self.split_all_frames[self.frame_step],
+                mask=self.offline_masks[self.frame_step],
+                frame_step=0,
+                obj_nums=obj_nums,
+            )
         else:
             self.offline_encoder(all_frames, all_masks)
 
-            self.add_reference_frame(frame_step=0, obj_nums=obj_nums)
+            self.add_reference_frame(
+                frame_step=0,
+                obj_nums=obj_nums,
+            )
 
         grad_state = torch.no_grad if aux_weight == 0 else torch.enable_grad
         with grad_state():
@@ -76,13 +89,16 @@ class AOTEngine(nn.Module):
             aux_losses.append(prev_aux_loss)
             aux_masks.append(prev_aux_mask)
         else:
-            self.match_propogate_one_frame(mask=self.offline_masks[self.frame_step])
+            self.match_propogate_one_frame(
+                mask=self.offline_masks[self.frame_step])
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
             self.update_short_term_memory(
                 curr_mask if not use_prev_prob else curr_prob,
                 None if use_prev_pred else self.assign_identity(
-                    self.offline_one_hot_masks[self.frame_step], self.offline_ignore_masks[self.frame_step]))
+                    self.offline_one_hot_masks[self.frame_step],
+                    self.offline_ignore_masks[self.frame_step],
+                ))
             curr_losses.append(curr_loss)
             curr_masks.append(curr_mask)
 
@@ -95,7 +111,9 @@ class AOTEngine(nn.Module):
             self.update_short_term_memory(
                 curr_mask if not use_prev_prob else curr_prob,
                 None if use_prev_pred else self.assign_identity(
-                    self.offline_one_hot_masks[self.frame_step], self.offline_ignore_masks[self.frame_step]))
+                    self.offline_one_hot_masks[self.frame_step],
+                    self.offline_ignore_masks[self.frame_step],
+                ))
             self.match_propogate_one_frame(mask=curr_prob)
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
@@ -120,7 +138,7 @@ class AOTEngine(nn.Module):
 
         all_frame_loss = aux_losses + curr_losses
 
-        boards = {'image': {}, 'scalar': {}} # type:Dict[str,Dict[str,List]]
+        boards = {'image': {}, 'scalar': {}}  # type:Dict[str,Dict[str,List]]
 
         return loss, all_pred_mask, all_frame_loss, boards
 
@@ -130,7 +148,8 @@ class AOTEngine(nn.Module):
         from networks.layers.loss import CrossEntropyLoss, SoftJaccordLoss
         bce_loss = CrossEntropyLoss(
             cfg.TRAIN_TOP_K_PERCENT_PIXELS,
-            cfg.TRAIN_HARD_MINING_RATIO * cfg.TRAIN_TOTAL_STEPS)
+            cfg.TRAIN_HARD_MINING_RATIO * cfg.TRAIN_TOTAL_STEPS,
+        )
         iou_loss = SoftJaccordLoss()
 
         losses = [bce_loss, iou_loss]
@@ -156,7 +175,8 @@ class AOTEngine(nn.Module):
                 curr_enc_embs = self.AOT.encode_image(img)
 
         if mask is not None:
-            curr_one_hot_mask, curr_ignore_mask = one_hot_mask(mask, self.max_obj_num)
+            curr_one_hot_mask, curr_ignore_mask = one_hot_mask(
+                mask, self.max_obj_num)
         elif self.enable_offline_enc:
             curr_one_hot_mask = self.offline_one_hot_masks[frame_step]
             curr_ignore_mask = self.offline_ignore_masks[frame_step]
@@ -185,11 +205,14 @@ class AOTEngine(nn.Module):
             self.generate_offline_masks(all_masks)
 
         if self.input_size_2d is None:
-            self.update_size(all_frames.size()[2:],
-                             self.offline_enc_embs[0][-1].size()[2:])
+            self.update_size(
+                all_frames.size()[2:],
+                self.offline_enc_embs[0][-1].size()[2:],
+            )
 
     def generate_offline_masks(self, masks):
-        offline_one_hot_masks, offline_ignore_masks = one_hot_mask(masks, self.max_obj_num)
+        offline_one_hot_masks, offline_ignore_masks = one_hot_mask(
+            masks, self.max_obj_num)
         self.offline_masks = list(
             torch.split(masks, self.batch_size, dim=0))
         self.offline_one_hot_masks = list(
@@ -199,16 +222,22 @@ class AOTEngine(nn.Module):
 
     def assign_identity(self, one_hot_mask, ignore_mask=None):
         if ignore_mask is None:
-            ignore_mask = torch.zeros(one_hot_mask.shape[0], 1, one_hot_mask.shape[2], one_hot_mask.shape[3], device=torch.device('cuda', self.gpu_id))
+            ignore_mask = torch.zeros(
+                one_hot_mask.shape[0], 1, one_hot_mask.shape[2], one_hot_mask.shape[3],
+                device=torch.device('cuda', self.gpu_id),
+            )
         if self.cfg.MODEL_IGNORE_TOKEN:
             non_ignored = (ignore_mask == 0).float()
-            one_hot_mask[:, 0, :, :] = one_hot_mask[:, 0, :, :] * non_ignored.squeeze()
+            one_hot_mask[:, 0, :, :] = one_hot_mask[
+                :, 0, :, :] * non_ignored.squeeze()
         if self.enable_id_shuffle:
-            one_hot_mask = torch.einsum('bohw,bot->bthw', one_hot_mask,
-                                        self.id_shuffle_matrix)
+            one_hot_mask = torch.einsum(
+                'bohw,bot->bthw', one_hot_mask,
+                self.id_shuffle_matrix,
+            )
         if self.cfg.MODEL_IGNORE_TOKEN:
             one_hot_mask = torch.cat((one_hot_mask, ignore_mask), 1)
-            
+
         id_emb = self.AOT.get_id_emb(one_hot_mask).view(
             self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
 
@@ -224,12 +253,14 @@ class AOTEngine(nn.Module):
             new_xs.append(all_x)
         return list(zip(*new_xs))
 
-    def add_reference_frame(self,
-                            img=None,
-                            mask=None,
-                            frame_step=-1,
-                            obj_nums=None,
-                            img_embs=None):
+    def add_reference_frame(
+        self,
+        img=None,
+        mask=None,
+        frame_step=-1,
+        obj_nums=None,
+        img_embs=None,
+    ):
         if self.obj_nums is None and obj_nums is None:
             print('No objects for reference frame!')
             exit()
@@ -263,19 +294,21 @@ class AOTEngine(nn.Module):
 
         if self.pos_emb is None:
             self.pos_emb = self.AOT.get_pos_emb(curr_enc_embs[-1]).expand(
-                self.batch_size, -1, -1,
-                -1).view(self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
+                self.batch_size, -1, -1, -1,
+            ).view(self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
 
         curr_id_emb = self.assign_identity(curr_one_hot_mask)
         self.curr_id_embs = curr_id_emb
 
         # self matching and propagation
-        self.curr_lstt_output = self.AOT.LSTT_forward(curr_enc_embs,
-                                                      None,
-                                                      None,
-                                                      curr_id_emb,
-                                                      pos_emb=self.pos_emb,
-                                                      size_2d=self.enc_size_2d)
+        self.curr_lstt_output = self.AOT.LSTT_forward(
+            curr_enc_embs,
+            None,
+            None,
+            curr_id_emb,
+            pos_emb=self.pos_emb,
+            size_2d=self.enc_size_2d,
+        )
 
         lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories = self.curr_lstt_output
 
@@ -308,12 +341,14 @@ class AOTEngine(nn.Module):
         self.curr_id_embs = curr_id_emb
 
         # self matching and propagation
-        self.curr_lstt_output = self.AOT.LSTT_forward(curr_enc_embs,
-                                                      None,
-                                                      None,
-                                                      curr_id_emb,
-                                                      pos_emb=self.pos_emb,
-                                                      size_2d=self.enc_size_2d)
+        self.curr_lstt_output = self.AOT.LSTT_forward(
+            curr_enc_embs,
+            None,
+            None,
+            curr_id_emb,
+            pos_emb=self.pos_emb,
+            size_2d=self.enc_size_2d,
+        )
 
         lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories = self.curr_lstt_output
 
@@ -330,14 +365,16 @@ class AOTEngine(nn.Module):
         if self.cfg.MODEL_RECURRENT_LTM:
             self.long_term_memories = new_long_term_memories
             return
-        
+
         updated_long_term_memories = []
         max_size = 48840
         for new_long_term_memory, last_long_term_memory in zip(
                 new_long_term_memories, self.long_term_memories):
             updated_e = []
-            for new_e, last_e in zip(new_long_term_memory,
-                                     last_long_term_memory):
+            for new_e, last_e in zip(
+                new_long_term_memory,
+                last_long_term_memory,
+            ):
                 new_mem = torch.cat([new_e, last_e], dim=0)
                 updated_e.append(new_mem)
             updated_long_term_memories.append(updated_e)
@@ -347,24 +384,26 @@ class AOTEngine(nn.Module):
         if curr_id_emb is None:
             curr_ignore_mask = None
             if len(curr_mask.size()) == 3 or curr_mask.size()[0] == 1:
-                curr_one_hot_mask, curr_ignore_mask = one_hot_mask(curr_mask, self.max_obj_num)
+                curr_one_hot_mask, curr_ignore_mask = one_hot_mask(
+                    curr_mask, self.max_obj_num)
             else:
                 curr_one_hot_mask = curr_mask
-            curr_id_emb = self.assign_identity(curr_one_hot_mask, curr_ignore_mask)
+            curr_id_emb = self.assign_identity(
+                curr_one_hot_mask, curr_ignore_mask)
 
         lstt_short_memories = self.curr_lstt_output[3]
         lstt_curr_inputs = self.curr_lstt_output[1]
         lstt_curr_memories_2d = []
         for layer_idx in range(len(lstt_curr_inputs)):
             curr_v = lstt_curr_inputs[layer_idx][1]
-            curr_v = self.AOT.LSTT.layers[layer_idx].linear_V(curr_v +
-                                                              curr_id_emb)
+            curr_v = self.AOT.LSTT.layers[layer_idx].linear_V(
+                curr_v + curr_id_emb)
             lstt_curr_inputs[layer_idx][1] = curr_v
 
             if self.cfg.MODEL_RECURRENT_STM:
                 curr_v = lstt_short_memories[layer_idx][1]
-                curr_v = self.AOT.LSTT.layers[layer_idx].linear_VMem(curr_v +
-                                                                curr_id_emb)
+                curr_v = self.AOT.LSTT.layers[layer_idx].linear_VMem(
+                    curr_v + curr_id_emb)
                 lstt_short_memories[layer_idx][1] = curr_v
             else:
                 lstt_short_memories[layer_idx][0] = lstt_curr_inputs[layer_idx][0]
@@ -373,11 +412,14 @@ class AOTEngine(nn.Module):
             if self.cfg.MODEL_SIMPLIFIED_STM:
                 lstt_curr_memories_2d.append([
                     lstt_short_memories[layer_idx][0],
-                    lstt_short_memories[layer_idx][1]])
+                    lstt_short_memories[layer_idx][1],
+                ])
             else:
                 lstt_curr_memories_2d.append([
-                    seq_to_2d(lstt_short_memories[layer_idx][0], self.enc_size_2d),
-                    seq_to_2d(lstt_short_memories[layer_idx][1], self.enc_size_2d)
+                    seq_to_2d(
+                        lstt_short_memories[layer_idx][0], self.enc_size_2d),
+                    seq_to_2d(
+                        lstt_short_memories[layer_idx][1], self.enc_size_2d),
                 ])
 
         self.short_term_memories_list.append(lstt_curr_memories_2d)
@@ -408,23 +450,29 @@ class AOTEngine(nn.Module):
             curr_enc_embs = img_embs
         self.curr_enc_embs = curr_enc_embs
 
-        self.curr_lstt_output = self.AOT.LSTT_forward(curr_enc_embs,
-                                                      self.long_term_memories,
-                                                      self.short_term_memories,
-                                                      None,
-                                                      pos_emb=self.pos_emb,
-                                                      size_2d=self.enc_size_2d)
+        self.curr_lstt_output = self.AOT.LSTT_forward(
+            curr_enc_embs,
+            self.long_term_memories,
+            self.short_term_memories,
+            None,
+            pos_emb=self.pos_emb,
+            size_2d=self.enc_size_2d,
+        )
 
     def decode_current_logits(self, output_size=None):
         curr_enc_embs = self.curr_enc_embs
         curr_lstt_embs = self.curr_lstt_output[0]
 
-        pred_id_logits = self.AOT.decode_id_logits(curr_lstt_embs,
-                                                   curr_enc_embs)
+        pred_id_logits = self.AOT.decode_id_logits(
+            curr_lstt_embs,
+            curr_enc_embs,
+        )
 
         if self.enable_id_shuffle:  # reverse shuffle
-            pred_id_logits = torch.einsum('bohw,bto->bthw', pred_id_logits,
-                                          self.id_shuffle_matrix)
+            pred_id_logits = torch.einsum(
+                'bohw,bto->bthw', pred_id_logits,
+                self.id_shuffle_matrix,
+            )
 
         # remove unused identities
         for batch_idx, obj_num in enumerate(self.obj_nums):
@@ -434,10 +482,12 @@ class AOTEngine(nn.Module):
         self.pred_id_logits = pred_id_logits
 
         if output_size is not None:
-            pred_id_logits = F.interpolate(pred_id_logits,
-                                           size=output_size,
-                                           mode="bilinear",
-                                           align_corners=self.align_corners)
+            pred_id_logits = F.interpolate(
+                pred_id_logits,
+                size=output_size,
+                mode="bilinear",
+                align_corners=self.align_corners,
+            )
 
         return pred_id_logits
 
@@ -445,10 +495,12 @@ class AOTEngine(nn.Module):
         if output_size is None:
             output_size = self.input_size_2d
 
-        pred_id_logits = F.interpolate(self.pred_id_logits,
-                                       size=output_size,
-                                       mode="bilinear",
-                                       align_corners=self.align_corners)
+        pred_id_logits = F.interpolate(
+            self.pred_id_logits,
+            size=output_size,
+            mode="bilinear",
+            align_corners=self.align_corners,
+        )
         pred_mask = torch.argmax(pred_id_logits, dim=1)
 
         if not return_prob:
@@ -460,10 +512,12 @@ class AOTEngine(nn.Module):
     def calculate_current_loss(self, gt_mask, step):
         pred_id_logits = self.pred_id_logits
 
-        pred_id_logits = F.interpolate(pred_id_logits,
-                                       size=gt_mask.size()[-2:],
-                                       mode="bilinear",
-                                       align_corners=self.align_corners)
+        pred_id_logits = F.interpolate(
+            pred_id_logits,
+            size=gt_mask.size()[-2:],
+            mode="bilinear",
+            align_corners=self.align_corners,
+        )
 
         label_list = []
         logit_list = []
@@ -546,12 +600,14 @@ class AOTEngine(nn.Module):
 
 
 class AOTInferEngine(nn.Module):
-    def __init__(self,
-                 aot_model,
-                 gpu_id=0,
-                 long_term_mem_gap=9999,
-                 short_term_mem_skip=1,
-                 max_aot_obj_num=None):
+    def __init__(
+        self,
+        aot_model,
+        gpu_id=0,
+        long_term_mem_gap=9999,
+        short_term_mem_skip=1,
+        max_aot_obj_num=None,
+    ):
         super().__init__()
 
         self.cfg = aot_model.cfg
@@ -613,9 +669,11 @@ class AOTInferEngine(nn.Module):
             bg_logits.append(logit[:, 0:1])
             fg_logits.append(logit[:, 1:1 + self.max_aot_obj_num])
 
-        bg_logit, _ = torch.min(torch.cat(bg_logits, dim=1),
-                                dim=1,
-                                keepdim=True)
+        bg_logit, _ = torch.min(
+            torch.cat(bg_logits, dim=1),
+            dim=1,
+            keepdim=True,
+        )
         merged_logit = torch.cat([bg_logit] + fg_logits, dim=1)
 
         return merged_logit
@@ -632,9 +690,15 @@ class AOTInferEngine(nn.Module):
             bg_probs.append(prob[:, 0:1])
             fg_probs.append(prob[:, 1:1 + self.max_aot_obj_num])
 
-        bg_prob = torch.prod(torch.cat(bg_probs, dim=1), dim=1, keepdim=True)
-        merged_prob = torch.cat([bg_prob] + fg_probs,
-                                dim=1).clamp(1e-5, 1 - 1e-5)
+        bg_prob = torch.prod(
+            torch.cat(bg_probs, dim=1),
+            dim=1,
+            keepdim=True,
+        )
+        merged_prob = torch.cat(
+            [bg_prob] + fg_probs,
+            dim=1,
+        ).clamp(1e-5, 1 - 1e-5)
         merged_logit = torch.logit(merged_prob)
 
         return merged_logit
@@ -644,21 +708,27 @@ class AOTInferEngine(nn.Module):
             obj_nums = obj_nums[0]
         aot_num = max(np.ceil(obj_nums / self.max_aot_obj_num), 1)
         while (aot_num > len(self.aot_engines)):
-            new_engine = AOTEngine(self.AOT, self.gpu_id,
-                                   self.long_term_mem_gap,
-                                   self.short_term_mem_skip)
+            new_engine = AOTEngine(
+                self.AOT, self.gpu_id,
+                self.long_term_mem_gap,
+                self.short_term_mem_skip,
+            )
             new_engine.eval()
             self.aot_engines.append(new_engine)
 
         separated_masks = self.separate_mask(mask)
         img_embs = None
-        for aot_engine, separated_mask in zip(self.aot_engines,
-                                              separated_masks):
-            aot_engine.add_reference_frame(img,
-                                           separated_mask,
-                                           obj_nums=[self.max_aot_obj_num],
-                                           frame_step=frame_step,
-                                           img_embs=img_embs)
+        for aot_engine, separated_mask in zip(
+            self.aot_engines,
+            separated_masks,
+        ):
+            aot_engine.add_reference_frame(
+                img,
+                separated_mask,
+                obj_nums=[self.max_aot_obj_num],
+                frame_step=frame_step,
+                img_embs=img_embs,
+            )
             if img_embs is None:  # reuse image embeddings
                 img_embs = aot_engine.curr_enc_embs
 
@@ -667,7 +737,8 @@ class AOTInferEngine(nn.Module):
     def match_propogate_one_frame(self, img=None, mask=None):
         img_embs = None
         for aot_engine in self.aot_engines:
-            aot_engine.match_propogate_one_frame(img, img_embs=img_embs, mask=mask)
+            aot_engine.match_propogate_one_frame(
+                img, img_embs=img_embs, mask=mask)
             if img_embs is None:  # reuse image embeddings
                 img_embs = aot_engine.curr_enc_embs
 
@@ -680,8 +751,10 @@ class AOTInferEngine(nn.Module):
 
     def update_memory(self, curr_mask):
         separated_masks = self.separate_mask(curr_mask)
-        for aot_engine, separated_mask in zip(self.aot_engines,
-                                              separated_masks):
+        for aot_engine, separated_mask in zip(
+            self.aot_engines,
+            separated_masks,
+        ):
             aot_engine.update_short_term_memory(separated_mask)
 
     def update_size(self):
