@@ -43,7 +43,6 @@ class AOTEngine(nn.Module):
         step=0,
         tf_board=False,
         use_prev_pred=False,
-        enable_prev_frame=False,
         use_prev_prob=False,
     ):  # only used for training
         if self.losses is None:
@@ -81,26 +80,18 @@ class AOTEngine(nn.Module):
         aux_masks = [ref_aux_mask]
 
         curr_losses, curr_masks = [], []
-        if enable_prev_frame:
-            self.set_prev_frame(frame_step=1)
-            with grad_state():
-                prev_aux_loss, prev_aux_mask = self.generate_loss_mask(
-                    self.offline_masks[self.frame_step], step)
-            aux_losses.append(prev_aux_loss)
-            aux_masks.append(prev_aux_mask)
-        else:
-            self.match_propogate_one_frame(
-                mask=self.offline_masks[self.frame_step])
-            curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
-                self.offline_masks[self.frame_step], step, return_prob=True)
-            self.update_short_term_memory(
-                curr_mask if not use_prev_prob else curr_prob,
-                None if use_prev_pred else self.assign_identity(
-                    self.offline_one_hot_masks[self.frame_step],
-                    self.offline_ignore_masks[self.frame_step],
-                ))
-            curr_losses.append(curr_loss)
-            curr_masks.append(curr_mask)
+        self.match_propogate_one_frame(
+            mask=self.offline_masks[self.frame_step])
+        curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
+            self.offline_masks[self.frame_step], step, return_prob=True)
+        self.update_short_term_memory(
+            curr_mask if not use_prev_prob else curr_prob,
+            None if use_prev_pred else self.assign_identity(
+                self.offline_one_hot_masks[self.frame_step],
+                self.offline_ignore_masks[self.frame_step],
+            ))
+        curr_losses.append(curr_loss)
+        curr_masks.append(curr_mask)
 
         self.match_propogate_one_frame(mask=curr_prob)
         curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
@@ -296,46 +287,6 @@ class AOTEngine(nn.Module):
             self.pos_emb = self.AOT.get_pos_emb(curr_enc_embs[-1]).expand(
                 self.batch_size, -1, -1, -1,
             ).view(self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
-
-        curr_id_emb = self.assign_identity(curr_one_hot_mask)
-        self.curr_id_embs = curr_id_emb
-
-        # self matching and propagation
-        self.curr_lstt_output = self.AOT.LSTT_forward(
-            curr_enc_embs,
-            None,
-            None,
-            curr_id_emb,
-            pos_emb=self.pos_emb,
-            size_2d=self.enc_size_2d,
-        )
-
-        lstt_embs, lstt_curr_memories, lstt_long_memories, lstt_short_memories = self.curr_lstt_output
-
-        if self.long_term_memories is None:
-            self.long_term_memories = lstt_long_memories
-        else:
-            self.update_long_term_memory(lstt_long_memories)
-        self.last_mem_step = frame_step
-
-        self.short_term_memories_list = [lstt_short_memories]
-        self.short_term_memories = lstt_short_memories
-
-    def set_prev_frame(self, img=None, mask=None, frame_step=1):
-        self.frame_step = frame_step
-        curr_enc_embs, curr_one_hot_mask = self.encode_one_img_mask(
-            img, mask, frame_step)
-
-        if curr_enc_embs is None:
-            print('No image for previous frame!')
-            exit()
-
-        if curr_one_hot_mask is None:
-            print('No mask for previous frame!')
-            exit()
-
-        self.curr_enc_embs = curr_enc_embs
-        self.curr_one_hot_mask = curr_one_hot_mask
 
         curr_id_emb = self.assign_identity(curr_one_hot_mask)
         self.curr_id_embs = curr_id_emb

@@ -308,7 +308,7 @@ class Trainer(object):
 
     def prepare_dataset(self):
         cfg = self.cfg
-        self.enable_prev_frame = cfg.TRAIN_ENABLE_PREV_FRAME
+        # self.enable_prev_frame = cfg.TRAIN_ENABLE_PREV_FRAME
 
         self.print_log('Process dataset...')
         composed_transforms = transforms.Compose([
@@ -335,7 +335,7 @@ class Trainer(object):
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
             )
             train_datasets.append(pretrain_vos_dataset)
-            self.enable_prev_frame = False
+            # self.enable_prev_frame = False
 
         if 'davis2017' in cfg.DATASETS:
             train_davis_dataset = DAVIS2017_Train(
@@ -347,7 +347,6 @@ class Trainer(object):
                 rand_gap=cfg.DATA_RANDOM_GAP_DAVIS,
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
-                enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
             )
             train_datasets.append(train_davis_dataset)
@@ -361,7 +360,6 @@ class Trainer(object):
                 rand_gap=cfg.DATA_RANDOM_GAP_VOST,
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
-                enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
                 ignore_thresh=cfg.DATA_VOST_IGNORE_THRESH,
                 ignore_in_merge=cfg.IGNORE_IN_MERGE,
@@ -377,7 +375,6 @@ class Trainer(object):
                 rand_gap=cfg.DATA_RANDOM_GAP_VISOR,
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
-                enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
                 ignore_thresh=cfg.DATA_VISOR_IGNORE_THRESH,
             )
@@ -391,7 +388,6 @@ class Trainer(object):
                 rand_gap=cfg.DATA_RANDOM_GAP_YTB,
                 rand_reverse=cfg.DATA_RANDOM_REVERSE_SEQ,
                 merge_prob=cfg.DATA_DYNAMIC_MERGE_PROB,
-                enable_prev_frame=self.enable_prev_frame,
                 max_obj_n=cfg.MODEL_MAX_OBJ_NUM,
             )
             train_datasets.append(train_ytb_dataset)
@@ -513,10 +509,7 @@ class Trainer(object):
 
         cfg = self.cfg
 
-        if self.enable_prev_frame:
-            frame_names = ['Ref', 'Prev']
-        else:
-            frame_names = ['Ref(Prev)']
+        frame_names = ['Ref(Prev)']
 
         for i in range(cfg.DATA_SEQ_LEN - 1):
             frame_names.append('Curr{}'.format(i + 1))
@@ -633,7 +626,6 @@ class Trainer(object):
                             obj_nums=obj_nums,
                             step=step,
                             tf_board=tf_board,
-                            enable_prev_frame=self.enable_prev_frame,
                             use_prev_prob=use_prev_prob,
                         )
                         loss = torch.mean(loss)
@@ -655,7 +647,6 @@ class Trainer(object):
                         obj_nums=obj_nums,
                         step=step,
                         tf_board=tf_board,
-                        enable_prev_frame=self.enable_prev_frame,
                         use_prev_prob=use_prev_prob,
                     )
                     loss = torch.mean(loss)
