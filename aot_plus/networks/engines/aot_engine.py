@@ -49,7 +49,7 @@ class AOTEngine(nn.Module):
         aux_weight = self.aux_weight * max(self.aux_step - step,
                                            0.) / self.aux_step
 
-        if self.cfg.PREV_PROBE:
+        if hasattr(self.cfg, "PREV_PROBE") and self.cfg.PREV_PROBE:
             self.split_all_frames = torch.split(all_frames, self.batch_size, dim=0)
             self.generate_offline_masks(all_masks)
             self.total_offline_frame_num = len(self.offline_masks)
