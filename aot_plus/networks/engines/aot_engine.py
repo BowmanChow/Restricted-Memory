@@ -84,21 +84,9 @@ class AOTEngine(nn.Module):
             mask=self.offline_masks[self.frame_step])
         curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
             self.offline_masks[self.frame_step], step, return_prob=True)
-        self.update_short_term_memory(
-            curr_mask if not use_prev_prob else curr_prob,
-            None if use_prev_pred else self.assign_identity(
-                self.offline_one_hot_masks[self.frame_step],
-                self.offline_ignore_masks[self.frame_step],
-            ))
         curr_losses.append(curr_loss)
         curr_masks.append(curr_mask)
-
-        self.match_propogate_one_frame(mask=curr_prob)
-        curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
-            self.offline_masks[self.frame_step], step, return_prob=True)
-        curr_losses.append(curr_loss)
-        curr_masks.append(curr_mask)
-        for _ in range(self.total_offline_frame_num - 3):
+        for _ in range(self.total_offline_frame_num - 2):
             self.update_short_term_memory(
                 curr_mask if not use_prev_prob else curr_prob,
                 None if use_prev_pred else self.assign_identity(
