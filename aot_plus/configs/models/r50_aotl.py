@@ -4,6 +4,7 @@ from .default import DefaultModelConfig
 class ModelConfig(DefaultModelConfig):
     def __init__(self):
         super().__init__()
+        self.USE_MASK = False
         self.MODEL_NAME = 'R50_AOTL'
 
         self.MODEL_ENCODER = 'resnet50'
