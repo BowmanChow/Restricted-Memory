@@ -25,7 +25,7 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 dataset="vost"
 split="val"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
-	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0
+	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0
 
 
 model_name=$(python -c "from configs.models.$model import ModelConfig ;print(ModelConfig().MODEL_NAME)")
