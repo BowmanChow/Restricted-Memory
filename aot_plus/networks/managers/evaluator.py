@@ -174,7 +174,7 @@ class Evaluator(object):
                 root=cfg.DIR_VOST,
                 transform=eval_transforms,
                 result_root=self.result_root,
-                is_oracle=True if cfg.ORACLE else False,
+                is_oracle=True if hasattr(cfg, "ORACLE") and cfg.ORACLE else False,
             )
         elif cfg.TEST_DATASET == 'test':
             self.result_root = os.path.join(cfg.DIR_EVALUATION,
