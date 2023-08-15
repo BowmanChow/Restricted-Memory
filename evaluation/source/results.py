@@ -31,3 +31,6 @@ class Results(object):
         tmp = tmp * np.arange(1, num_objects + 1)[:, None, None, None]
         masks = (tmp == masks[None, ...]) > 0
         return masks
+
+    def get_sequences(self):
+        return os.listdir(self.root_dir)
