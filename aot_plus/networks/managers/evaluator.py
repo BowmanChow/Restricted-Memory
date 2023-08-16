@@ -26,7 +26,13 @@ from networks.engines.aot_engine import AOTEngine, AOTInferEngine
 
 
 class Evaluator(object):
-    def __init__(self, cfg, rank=0, seq_queue=None, info_queue=None):
+    def __init__(
+        self,
+        cfg,
+        rank=0,
+        seq_queue=None,
+        info_queue=None,
+    ):
         self.gpu = cfg.TEST_GPU_ID + rank
         self.gpu_num = cfg.TEST_GPU_NUM
         self.rank = rank
@@ -34,10 +40,11 @@ class Evaluator(object):
         self.seq_queue = seq_queue
         self.info_queue = info_queue
 
-        self.print_log("Exp {}:".format(cfg.EXP_NAME))
-        self.print_log(json.dumps(cfg.__dict__, indent=4, sort_keys=True))
+        self.print_log(f"Exp {cfg.EXP_NAME}:")
+        self.print_log(
+            json.dumps(cfg.__dict__, indent=4, sort_keys=True))
 
-        print("Use GPU {} for evaluating.".format(self.gpu))
+        print(f"Use GPU {self.gpu} for evaluating.")
         torch.cuda.set_device(self.gpu)
 
         self.print_log('Build VOS model.')
@@ -62,50 +69,57 @@ class Evaluator(object):
                 ckpts = os.listdir(cfg.DIR_CKPT)
                 if len(ckpts) > 0:
                     ckpts = list(
-                        map(lambda x: int(x.split('_')[-1].split('.')[0]),
-                            ckpts))
+                        map(
+                            lambda x: int(x.split('_')[-1].split('.')[0]),
+                            ckpts,
+                        ))
                     ckpt = np.sort(ckpts)[-1]
                 else:
-                    self.print_log('No checkpoint in {}.'.format(cfg.DIR_CKPT))
+                    self.print_log(f'No checkpoint in {cfg.DIR_CKPT}.')
                     exit()
             self.ckpt = ckpt
             if cfg.TEST_EMA:
                 cfg.DIR_CKPT = os.path.join(cfg.DIR_RESULT, 'ema_ckpt')
-            cfg.TEST_CKPT_PATH = os.path.join(cfg.DIR_CKPT,
-                                              'save_step_%s.pth' % ckpt)
-            self.model, removed_dict = load_network(self.model,
-                                                    cfg.TEST_CKPT_PATH,
-                                                    self.gpu)
+            cfg.TEST_CKPT_PATH = os.path.join(
+                cfg.DIR_CKPT,
+                f'save_step_{ckpt}.pth',
+            )
+            self.model, removed_dict = load_network(
+                self.model,
+                cfg.TEST_CKPT_PATH,
+                self.gpu,
+            )
             if len(removed_dict) > 0:
                 self.print_log(
-                    'Remove {} from pretrained model.'.format(removed_dict))
-            self.print_log('Load latest checkpoint from {}'.format(
-                cfg.TEST_CKPT_PATH))
+                    f'Remove {removed_dict} from pretrained model.')
+            self.print_log(
+                f'Load latest checkpoint from {cfg.TEST_CKPT_PATH}')
         else:
             self.ckpt = 'unknown'
-            self.model, removed_dict = load_network(self.model,
-                                                    cfg.TEST_CKPT_PATH,
-                                                    self.gpu)
+            self.model, removed_dict = load_network(
+                self.model,
+                cfg.TEST_CKPT_PATH,
+                self.gpu,
+            )
             if len(removed_dict) > 0:
                 self.print_log(
-                    'Remove {} from pretrained model.'.format(removed_dict))
-            self.print_log('Load checkpoint from {}'.format(
-                cfg.TEST_CKPT_PATH))
+                    f'Remove {removed_dict} from pretrained model.')
+            self.print_log(
+                f'Load checkpoint from {cfg.TEST_CKPT_PATH}')
 
     def prepare_dataset(self):
         cfg = self.cfg
         self.print_log('Process dataset...')
         eval_transforms = transforms.Compose([
-            tr.MultiRestrictSize(cfg.TEST_MIN_SIZE, cfg.TEST_MAX_SIZE,
-                                 cfg.TEST_FLIP, cfg.TEST_MULTISCALE,
-                                 cfg.MODEL_ALIGN_CORNERS),
+            tr.MultiRestrictSize(
+                cfg.TEST_MIN_SIZE, cfg.TEST_MAX_SIZE,
+                cfg.TEST_FLIP, cfg.TEST_MULTISCALE,
+                cfg.MODEL_ALIGN_CORNERS,
+            ),
             tr.MultiToTensor()
         ])
 
-        eval_name = '{}_{}_{}_{}_ckpt_{}'.format(cfg.TEST_DATASET,
-                                                 cfg.TEST_DATASET_SPLIT,
-                                                 cfg.EXP_NAME, cfg.STAGE_NAME,
-                                                 self.ckpt)
+        eval_name = f'{cfg.TEST_DATASET}_{cfg.TEST_DATASET_SPLIT}_{cfg.EXP_NAME}_{cfg.STAGE_NAME}_ckpt_{self.ckpt}'
 
         if cfg.TEST_EMA:
             eval_name += '_ema'
@@ -118,35 +132,43 @@ class Evaluator(object):
 
         if 'youtubevos' in cfg.TEST_DATASET:
             year = int(cfg.TEST_DATASET[-4:])
-            self.result_root = os.path.join(cfg.DIR_EVALUATION,
-                                            cfg.TEST_DATASET, eval_name,
-                                            'Annotations')
+            self.result_root = os.path.join(
+                cfg.DIR_EVALUATION,
+                cfg.TEST_DATASET, eval_name,
+                'Annotations',
+            )
             if '_all_frames' in cfg.TEST_DATASET_SPLIT:
                 split = cfg.TEST_DATASET_SPLIT.split('_')[0]
                 youtubevos_test = YOUTUBEVOS_DenseTest
 
-                self.result_root_sparse = os.path.join(cfg.DIR_EVALUATION,
-                                                       cfg.TEST_DATASET,
-                                                       eval_name + '_sparse',
-                                                       'Annotations')
+                self.result_root_sparse = os.path.join(
+                    cfg.DIR_EVALUATION,
+                    cfg.TEST_DATASET,
+                    eval_name + '_sparse',
+                    'Annotations',
+                )
                 self.zip_dir_sparse = os.path.join(
                     cfg.DIR_EVALUATION, cfg.TEST_DATASET,
-                    '{}_sparse.zip'.format(eval_name))
+                    f'{eval_name}_sparse.zip')
             else:
                 split = cfg.TEST_DATASET_SPLIT
                 youtubevos_test = YOUTUBEVOS_Test
 
-            self.dataset = youtubevos_test(root=cfg.DIR_YTB,
-                                           year=year,
-                                           split=split,
-                                           transform=eval_transforms,
-                                           result_root=self.result_root)
+            self.dataset = youtubevos_test(
+                root=cfg.DIR_YTB,
+                year=year,
+                split=split,
+                transform=eval_transforms,
+                result_root=self.result_root,
+            )
 
         elif cfg.TEST_DATASET == 'davis2017':
             resolution = 'Full-Resolution' if cfg.TEST_DATASET_FULL_RESOLUTION else '480p'
-            self.result_root = os.path.join(cfg.DIR_EVALUATION,
-                                            cfg.TEST_DATASET, eval_name,
-                                            'Annotations', resolution)
+            self.result_root = os.path.join(
+                cfg.DIR_EVALUATION,
+                cfg.TEST_DATASET, eval_name,
+                'Annotations', resolution,
+            )
             self.dataset = DAVIS_Test(
                 split=[cfg.TEST_DATASET_SPLIT],
                 root=cfg.DIR_DAVIS,
@@ -157,51 +179,61 @@ class Evaluator(object):
 
         elif cfg.TEST_DATASET == 'davis2016':
             resolution = 'Full-Resolution' if cfg.TEST_DATASET_FULL_RESOLUTION else '480p'
-            self.result_root = os.path.join(cfg.DIR_EVALUATION,
-                                            cfg.TEST_DATASET, eval_name,
-                                            'Annotations', resolution)
+            self.result_root = os.path.join(
+                cfg.DIR_EVALUATION,
+                cfg.TEST_DATASET, eval_name,
+                'Annotations', resolution,
+            )
             self.dataset = DAVIS_Test(
                 split=[cfg.TEST_DATASET_SPLIT],
                 root=cfg.DIR_DAVIS,
                 year=2016,
                 transform=eval_transforms,
                 full_resolution=cfg.TEST_DATASET_FULL_RESOLUTION,
-                result_root=self.result_root)
+                result_root=self.result_root,
+            )
 
         elif cfg.TEST_DATASET == 'vost':
             eval_name = 'debug'
-            self.result_root = os.path.join(cfg.DIR_EVALUATION,
-                                            cfg.TEST_DATASET, eval_name)
+            self.result_root = os.path.join(
+                cfg.DIR_EVALUATION,
+                cfg.TEST_DATASET, eval_name,
+            )
             self.dataset = VOST_Test(
                 split=[cfg.TEST_DATASET_SPLIT],
                 root=cfg.DIR_VOST,
                 transform=eval_transforms,
                 result_root=self.result_root,
-                is_oracle=True if hasattr(cfg, "ORACLE") and cfg.ORACLE else False,
+                is_oracle=True if hasattr(
+                    cfg, "ORACLE") and cfg.ORACLE else False,
             )
         elif cfg.TEST_DATASET == 'test':
-            self.result_root = os.path.join(cfg.DIR_EVALUATION,
-                                            cfg.TEST_DATASET, eval_name,
-                                            'Annotations')
+            self.result_root = os.path.join(
+                cfg.DIR_EVALUATION,
+                cfg.TEST_DATASET, eval_name,
+                'Annotations',
+            )
             self.dataset = EVAL_TEST(eval_transforms, self.result_root)
         else:
             self.print_log('Unknown dataset!')
             exit()
 
-        self.print_log('Eval {} on {} {}:'.format(cfg.EXP_NAME,
-                                                  cfg.TEST_DATASET,
-                                                  cfg.TEST_DATASET_SPLIT))
-        self.source_folder = os.path.join(cfg.DIR_EVALUATION, cfg.TEST_DATASET,
-                                          eval_name, 'Annotations')
-        self.zip_dir = os.path.join(cfg.DIR_EVALUATION, cfg.TEST_DATASET,
-                                    '{}.zip'.format(eval_name))
+        self.print_log(
+            f'Eval {cfg.EXP_NAME} on {cfg.TEST_DATASET} {cfg.TEST_DATASET_SPLIT}:')
+        self.source_folder = os.path.join(
+            cfg.DIR_EVALUATION, cfg.TEST_DATASET,
+            eval_name, 'Annotations',
+        )
+        self.zip_dir = os.path.join(
+            cfg.DIR_EVALUATION, cfg.TEST_DATASET,
+            f'{eval_name}.zip',
+        )
         if not os.path.exists(self.result_root):
             try:
                 os.makedirs(self.result_root)
             except Exception as inst:
                 self.print_log(inst)
-                self.print_log('Failed to mask dir: {}.'.format(
-                    self.result_root))
+                self.print_log(f'Failed to mask dir: {self.result_root}.')
         self.print_log('Done!')
 
     def evaluating(self):
@@ -242,21 +274,25 @@ class Evaluator(object):
                     engine.restart_engine()
 
                 seq_name = seq_dataset.seq_name
-                print('GPU {} - Processing Seq {} [{}/{}]:'.format(
-                    self.gpu, seq_name, video_num, total_video_num))
+                print(
+                    f'GPU {self.gpu} - Processing Seq {seq_name} [{video_num}/{total_video_num}]:')
                 gc.collect()
                 torch.cuda.empty_cache()
 
-                seq_dataloader = DataLoader(seq_dataset,
-                                            batch_size=1,
-                                            shuffle=False,
-                                            num_workers=cfg.TEST_WORKERS,
-                                            pin_memory=True)
+                seq_dataloader = DataLoader(
+                    seq_dataset,
+                    batch_size=1,
+                    shuffle=False,
+                    num_workers=cfg.TEST_WORKERS,
+                    pin_memory=True,
+                )
 
                 if 'all_frames' in cfg.TEST_DATASET_SPLIT:
                     images_sparse = seq_dataset.images_sparse
-                    seq_dir_sparse = os.path.join(self.result_root_sparse,
-                                                  seq_name)
+                    seq_dir_sparse = os.path.join(
+                        self.result_root_sparse,
+                        seq_name,
+                    )
                     if not os.path.exists(seq_dir_sparse):
                         os.makedirs(seq_dir_sparse)
 
@@ -277,12 +313,14 @@ class Evaluator(object):
                     for aug_idx in range(len(samples)):
                         if len(all_engines) <= aug_idx:
                             all_engines.append(
-                                build_engine(cfg.MODEL_ENGINE,
-                                             phase='eval',
-                                             aot_model=self.model,
-                                             gpu_id=self.gpu,
-                                             long_term_mem_gap=self.cfg.
-                                             TEST_LONG_TERM_MEM_GAP))
+                                build_engine(
+                                    cfg.MODEL_ENGINE,
+                                    phase='eval',
+                                    aot_model=self.model,
+                                    gpu_id=self.gpu,
+                                    long_term_mem_gap=self.cfg.
+                                    TEST_LONG_TERM_MEM_GAP,
+                                ))
                             all_engines[-1].eval()
 
                         engine = all_engines[aug_idx]
@@ -302,8 +340,10 @@ class Evaluator(object):
                         obj_idx = [int(_obj_idx) for _obj_idx in obj_idx]
 
                         current_img = sample['current_img']
-                        current_img = current_img.cuda(self.gpu,
-                                                       non_blocking=True)
+                        current_img = current_img.cuda(
+                            self.gpu,
+                            non_blocking=True,
+                        )
                         sample['current_img'] = current_img
 
                         if 'current_label' in sample.keys():
@@ -319,10 +359,12 @@ class Evaluator(object):
                                 current_label,
                                 size=current_img.size()[2:],
                                 mode="nearest").int()
-                            engine.add_reference_frame(current_img,
-                                                       _current_label,
-                                                       frame_step=0,
-                                                       obj_nums=obj_nums)
+                            engine.add_reference_frame(
+                                current_img,
+                                _current_label,
+                                frame_step=0,
+                                obj_nums=obj_nums,
+                            )
                             pred_prob = _current_label
                         else:
                             if aug_idx == 0:
@@ -334,13 +376,16 @@ class Evaluator(object):
 
                             if self.cfg.USE_MASK:
                                 if self.cfg.PREV_PROBE:
-                                    engine.match_propogate_one_frame(current_img, mask=pred_prob)
+                                    engine.match_propogate_one_frame(
+                                        current_img, mask=pred_prob)
                                 elif self.cfg.ORACLE:
                                     _current_label = F.interpolate(
                                         current_label,
                                         size=current_img.size()[2:],
-                                        mode="nearest").int()
-                                    engine.match_propogate_one_frame(current_img, mask=_current_label)
+                                        mode="nearest",
+                                    ).int()
+                                    engine.match_propogate_one_frame(
+                                        current_img, mask=_current_label)
                                     current_label = None
                                 else:
                                     raise Exception("Unexpeted !")
@@ -388,7 +433,8 @@ class Evaluator(object):
                                     current_img,
                                     current_label,
                                     obj_nums=new_obj_nums,
-                                    frame_step=frame_idx)
+                                    frame_step=frame_idx,
+                                )
                         else:
                             if not cfg.MODEL_USE_PREV_PROB:
                                 if cfg.TEST_FLIP:
@@ -402,7 +448,8 @@ class Evaluator(object):
                                     current_label = F.interpolate(
                                         current_label,
                                         size=engine.input_size_2d,
-                                        mode="nearest")
+                                        mode="nearest",
+                                    )
                                     engine.update_memory(current_label)
                             else:
                                 if cfg.TEST_FLIP:
@@ -415,7 +462,8 @@ class Evaluator(object):
                                     current_prob = F.interpolate(
                                         current_prob,
                                         size=engine.input_size_2d,
-                                        mode="nearest")
+                                        mode="nearest",
+                                    )
                                     engine.update_memory(current_prob)
 
                         now_timer = torch.cuda.Event(enable_timing=True)
@@ -428,15 +476,15 @@ class Evaluator(object):
                                 seq_timers[-1][1]) / 1e3
                             obj_num = obj_nums[0]
                             print(
-                                'GPU {} - Frame: {} - Obj Num: {}, Time: {}ms'.
-                                format(self.gpu, imgname[0].split('.')[0],
-                                       obj_num, int(one_frametime * 1e3)))
+                                f"GPU {self.gpu} - Frame: {imgname[0].split('.')[0]} - Obj Num: {obj_num}, Time: {int(one_frametime * 1e3)}ms")
 
                         # Save result
                         seq_pred_masks['dense'].append({
                             'path':
-                            os.path.join(self.result_root, seq_name,
-                                         imgname[0].split('.')[0] + '.png'),
+                            os.path.join(
+                                self.result_root, seq_name,
+                                imgname[0].split('.')[0] + '.png',
+                            ),
                             'mask':
                             pred_label.detach().cpu(),
                             'obj_idx':
@@ -445,9 +493,10 @@ class Evaluator(object):
                         if 'all_frames' in cfg.TEST_DATASET_SPLIT and imgname in images_sparse:
                             seq_pred_masks['sparse'].append({
                                 'path':
-                                os.path.join(self.result_root_sparse, seq_name,
-                                             imgname[0].split('.')[0] +
-                                             '.png'),
+                                os.path.join(
+                                    self.result_root_sparse, seq_name,
+                                    imgname[0].split('.')[0] + '.png',
+                                ),
                                 'mask':
                                 pred_label.detach().cpu(),
                                 'obj_idx':
@@ -457,8 +506,10 @@ class Evaluator(object):
                 # Save result
                 for mask_result in seq_pred_masks['dense'] + seq_pred_masks[
                         'sparse']:
-                    save_mask(mask_result['mask'].squeeze(0).squeeze(0),
-                              mask_result['path'], mask_result['obj_idx'])
+                    save_mask(
+                        mask_result['mask'].squeeze(0).squeeze(0),
+                        mask_result['path'], mask_result['obj_idx'],
+                    )
                 del (seq_pred_masks)
 
                 for timer in seq_timers:
@@ -477,10 +528,7 @@ class Evaluator(object):
                 max_mem = torch.cuda.max_memory_allocated(
                     device=self.gpu) / (1024.**3)
                 print(
-                    "GPU {} - Seq {} - FPS: {:.2f}. All-Frame FPS: {:.2f}, All-Seq FPS: {:.2f}, Max Mem: {:.2f}G"
-                    .format(self.gpu, seq_name, 1. / seq_avg_time_per_frame,
-                            1. / total_avg_time_per_frame, 1. / avg_sfps,
-                            max_mem))
+                    f"GPU {self.gpu} - Seq {seq_name} - FPS: {1. / seq_avg_time_per_frame:.2f}. All-Frame FPS: {1. / total_avg_time_per_frame:.2f}, All-Seq FPS: {1. / avg_sfps:.2f}, Max Mem: {max_mem:.2f}G")
 
         if self.seq_queue is not None:
             if self.rank != 0:
@@ -489,7 +537,7 @@ class Evaluator(object):
                     'total_frame': total_frame,
                     'total_sfps': total_sfps,
                     'processed_video_num': processed_video_num,
-                    'max_mem': max_mem
+                    'max_mem': max_mem,
                 })
             print('Finished the evaluation on GPU {}.'.format(self.gpu))
             if self.rank == 0:
@@ -509,9 +557,7 @@ class Evaluator(object):
                             1. / all_reduced_avg_sfps, max_mem))
         else:
             print(
-                "GPU {} - All-Frame FPS: {:.2f}, All-Seq FPS: {:.2f}, Max Mem: {:.2f}G"
-                .format(self.gpu, 1. / total_avg_time_per_frame, 1. / avg_sfps,
-                        max_mem))
+                f"GPU {self.gpu} - All-Frame FPS: {1. / total_avg_time_per_frame:.2f}, All-Seq FPS: {1. / avg_sfps:.2f}, Max Mem: {max_mem:.2f}G")
 
         if self.rank == 0:
             # zip_folder(self.source_folder, self.zip_dir)
@@ -520,9 +566,9 @@ class Evaluator(object):
             #     zip_folder(self.result_root_sparse, self.zip_dir_sparse)
             end_eval_time = time.time()
             total_eval_time = str(
-                datetime.timedelta(seconds=int(end_eval_time -
-                                               start_eval_time)))
-            self.print_log("Total evaluation time: {}".format(total_eval_time))
+                datetime.timedelta(
+                    seconds=int(end_eval_time - start_eval_time)))
+            self.print_log(f"Total evaluation time: {total_eval_time}")
 
     def print_log(self, string):
         if self.rank == 0:
