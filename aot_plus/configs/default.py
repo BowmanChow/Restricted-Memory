@@ -76,7 +76,7 @@ class DefaultEngineConfig():
         self.TRAIN_HARD_MINING_RATIO = 0.5
         self.TRAIN_EMA_RATIO = 0.1
         self.TRAIN_CLIP_GRAD_NORM = 5.
-        self.TRAIN_SAVE_STEP = 1000
+        self.TRAIN_SAVE_STEP = 500
         self.TRAIN_EVAL = False
         self.TRAIN_MAX_KEEP_CKPT = 8
         self.TRAIN_RESUME = False
