@@ -15,8 +15,10 @@ from networks.managers.trainer import Trainer
 from get_config import get_config
 
 
-def main_worker(gpu, cfg, enable_amp=True, exp_name='default'):
+def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
     # Initiate a training manager
+    if gpu == 0:
+        sys.stdout = Tee(os.path.join(log_dir, "print.log"))
     trainer = Trainer(rank=gpu, cfg=cfg, enable_amp=enable_amp)
     # Start Training
     trainer.sequential_training()
@@ -50,7 +52,7 @@ def main():
 
     log_dir = make_log_dir(args.log, cfg.EXP_NAME)
     copy_codes(log_dir)
-    sys.stdout = Tee(os.path.join(log_dir, "print.log"))
+    # sys.stdout = Tee(os.path.join(log_dir, "print.log"))
 
     if len(args.datasets) > 0:
         cfg.DATASETS = args.datasets
@@ -82,10 +84,10 @@ def main():
     cfg.save_self()
 
     if cfg.TRAIN_GPUS == 1:
-       main_worker(0, cfg, args.amp, args.exp_name) 
+        main_worker(0, cfg, args.amp, args.exp_name, log_dir=log_dir) 
     else:
         # Use torch.multiprocessing.spawn to launch distributed processes
-        mp.spawn(main_worker, nprocs=cfg.TRAIN_GPUS, args=(cfg, args.amp, args.exp_name))
+        mp.spawn(main_worker, nprocs=cfg.TRAIN_GPUS, args=(cfg, args.amp, args.exp_name, log_dir))
 
 
 if __name__ == '__main__':
