@@ -1,3 +1,4 @@
+import copy
 import gc
 import os
 import time
@@ -316,7 +317,7 @@ class Evaluator(object):
                                 build_engine(
                                     cfg.MODEL_ENGINE,
                                     phase='eval',
-                                    aot_model=self.model,
+                                    aot_model=self.model if aug_idx==0 else copy.deepcopy(self.model),
                                     gpu_id=self.gpu,
                                     long_term_mem_gap=self.cfg.
                                     TEST_LONG_TERM_MEM_GAP,
@@ -376,23 +377,22 @@ class Evaluator(object):
 
                             if self.cfg.USE_MASK:
                                 if self.cfg.PREV_PROBE:
-                                    engine.match_propogate_one_frame(
-                                        current_img, mask=pred_prob)
+                                    pred_logit = engine.match_propogate_one_frame(
+                                        current_img, mask=pred_prob, output_size=(ori_height, ori_width))
                                 elif self.cfg.ORACLE:
                                     _current_label = F.interpolate(
                                         current_label,
                                         size=current_img.size()[2:],
                                         mode="nearest",
                                     ).int()
-                                    engine.match_propogate_one_frame(
-                                        current_img, mask=_current_label)
+                                    pred_logit = engine.match_propogate_one_frame(
+                                        current_img, mask=_current_label, output_size=(ori_height, ori_width))
                                     current_label = None
                                 else:
                                     raise Exception("Unexpeted !")
                             else:
-                                engine.match_propogate_one_frame(current_img)
-                            pred_logit = engine.decode_current_logits(
-                                (ori_height, ori_width))
+                                pred_logit = engine.match_propogate_one_frame(
+                                    current_img, output_size=(ori_height, ori_width))
 
                             if is_flipped:
                                 pred_logit = flip_tensor(pred_logit, 3)

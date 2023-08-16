@@ -268,7 +268,6 @@ class AOTEngine(nn.Module):
         if self.input_size_2d is None:
             self.update_size(img.size()[2:], curr_enc_embs[-1].size()[2:])
 
-        self.curr_enc_embs = curr_enc_embs
         self.curr_one_hot_mask = curr_one_hot_mask
 
         if self.pos_emb is None:
@@ -280,7 +279,7 @@ class AOTEngine(nn.Module):
         self.curr_id_embs = curr_id_emb
 
         # self matching and propagation
-        self.curr_lstt_output = self.AOT.LSTT_forward(
+        curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
             curr_id_emb,
             pos_emb=self.pos_emb,
@@ -289,6 +288,8 @@ class AOTEngine(nn.Module):
 
         self.last_mem_step = frame_step
         self.AOT.init_LSTT_memory()
+
+        self.decode_current_logits(curr_enc_embs, curr_lstt_output)
 
     def update_short_term_memory(self, curr_mask, curr_id_emb=None):
         if curr_id_emb is None:
@@ -311,7 +312,7 @@ class AOTEngine(nn.Module):
             is_update_long_memory=is_update_long_memory,
         )
 
-    def match_propogate_one_frame(self, img=None, img_embs=None, mask=None):
+    def match_propogate_one_frame(self, img=None, img_embs=None, mask=None, output_size=None):
         self.frame_step += 1
         if (not self.enable_offline_enc) and (img is None):
             img = self.split_all_frames[self.frame_step]
@@ -324,19 +325,17 @@ class AOTEngine(nn.Module):
                     img, None, self.frame_step)
         else:
             curr_enc_embs = img_embs
-        self.curr_enc_embs = curr_enc_embs
 
-        self.curr_lstt_output = self.AOT.LSTT_forward(
+        curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
             None,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
         )
 
-    def decode_current_logits(self, output_size=None):
-        curr_enc_embs = self.curr_enc_embs
-        curr_lstt_embs = self.curr_lstt_output
+        return self.decode_current_logits(curr_enc_embs, curr_lstt_output, output_size=output_size)
 
+    def decode_current_logits(self, curr_enc_embs, curr_lstt_embs, output_size=None,):
         pred_id_logits = self.AOT.decode_id_logits(
             curr_lstt_embs,
             curr_enc_embs,
@@ -409,7 +408,6 @@ class AOTEngine(nn.Module):
         return total_loss
 
     def generate_loss_mask(self, gt_mask, step, return_prob=False):
-        self.decode_current_logits()
         loss = self.calculate_current_loss(gt_mask, step)
         if return_prob:
             mask, prob = self.predict_current_mask(return_prob=True)
@@ -454,7 +452,6 @@ class AOTEngine(nn.Module):
         self.offline_frames = -1
         self.total_offline_frame_num = 0
 
-        self.curr_enc_embs = None
         self.curr_memories = None
         self.curr_id_embs = None
 
@@ -600,23 +597,16 @@ class AOTInferEngine(nn.Module):
                 frame_step=frame_step,
                 img_embs=img_embs,
             )
-            if img_embs is None:  # reuse image embeddings
-                img_embs = aot_engine.curr_enc_embs
 
         self.update_size()
 
-    def match_propogate_one_frame(self, img=None, mask=None):
+    def match_propogate_one_frame(self, img=None, mask=None, output_size=None):
         img_embs = None
-        for aot_engine in self.aot_engines:
-            aot_engine.match_propogate_one_frame(
-                img, img_embs=img_embs, mask=mask)
-            if img_embs is None:  # reuse image embeddings
-                img_embs = aot_engine.curr_enc_embs
-
-    def decode_current_logits(self, output_size=None):
         all_logits = []
         for aot_engine in self.aot_engines:
-            all_logits.append(aot_engine.decode_current_logits(output_size))
+            logits = aot_engine.match_propogate_one_frame(
+                img, img_embs=img_embs, mask=mask, output_size=output_size)
+            all_logits.append(logits)
         pred_id_logits = self.soft_logit_aggregation(all_logits)
         return pred_id_logits
 
