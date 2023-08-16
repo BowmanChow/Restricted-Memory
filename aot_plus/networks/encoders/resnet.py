@@ -10,25 +10,35 @@ from torchvision.transforms import InterpolationMode
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self,
-                 inplanes,
-                 planes,
-                 stride=1,
-                 dilation=1,
-                 downsample=None,
-                 BatchNorm=None):
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        stride=1,
+        dilation=1,
+        downsample=None,
+        BatchNorm=None,
+    ):
         super(Bottleneck, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            inplanes, planes,
+            kernel_size=1, bias=False,
+        )
         self.bn1 = BatchNorm(planes)
-        self.conv2 = nn.Conv2d(planes,
-                               planes,
-                               kernel_size=3,
-                               stride=stride,
-                               dilation=dilation,
-                               padding=dilation,
-                               bias=False)
+        self.conv2 = nn.Conv2d(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=stride,
+            dilation=dilation,
+            padding=dilation,
+            bias=False,
+        )
         self.bn2 = BatchNorm(planes)
-        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(
+            planes, planes * 4,
+            kernel_size=1, bias=False,
+        )
         self.bn3 = BatchNorm(planes * 4)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -59,7 +69,14 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, layers, output_stride, BatchNorm, freeze_at=0):
+    def __init__(
+            self,
+            block,
+            layers,
+            output_stride,
+            BatchNorm,
+            freeze_at=0,
+    ):
         self.inplanes = 64
         super(ResNet, self).__init__()
 
@@ -74,34 +91,42 @@ class ResNet(nn.Module):
         self.strides = strides
 
         # Modules
-        self.conv1 = nn.Conv2d(3,
-                               64,
-                               kernel_size=7,
-                               stride=2,
-                               padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(
+            3,
+            64,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         self.bn1 = BatchNorm(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self._make_layer(block,
-                                       64,
-                                       layers[0],
-                                       stride=strides[0],
-                                       dilation=dilations[0],
-                                       BatchNorm=BatchNorm)
-        self.layer2 = self._make_layer(block,
-                                       128,
-                                       layers[1],
-                                       stride=strides[1],
-                                       dilation=dilations[1],
-                                       BatchNorm=BatchNorm)
-        self.layer3 = self._make_layer(block,
-                                       256,
-                                       layers[2],
-                                       stride=strides[2],
-                                       dilation=dilations[2],
-                                       BatchNorm=BatchNorm)
+        self.layer1 = self._make_layer(
+            block,
+            64,
+            layers[0],
+            stride=strides[0],
+            dilation=dilations[0],
+            BatchNorm=BatchNorm,
+        )
+        self.layer2 = self._make_layer(
+            block,
+            128,
+            layers[1],
+            stride=strides[1],
+            dilation=dilations[1],
+            BatchNorm=BatchNorm,
+        )
+        self.layer3 = self._make_layer(
+            block,
+            256,
+            layers[2],
+            stride=strides[2],
+            dilation=dilations[2],
+            BatchNorm=BatchNorm,
+        )
         # self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
 
         self.stem = [self.conv1, self.bn1]
@@ -110,35 +135,43 @@ class ResNet(nn.Module):
         self._init_weight()
         self.freeze(freeze_at)
 
-    def _make_layer(self,
-                    block,
-                    planes,
-                    blocks,
-                    stride=1,
-                    dilation=1,
-                    BatchNorm=None):
+    def _make_layer(
+        self,
+        block,
+        planes,
+        blocks,
+        stride=1,
+        dilation=1,
+        BatchNorm=None,
+    ):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes,
-                          planes * block.expansion,
-                          kernel_size=1,
-                          stride=stride,
-                          bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 BatchNorm(planes * block.expansion),
             )
 
         layers = []
         layers.append(
-            block(self.inplanes, planes, stride, max(dilation // 2, 1),
-                  downsample, BatchNorm))
+            block(
+                self.inplanes, planes, stride, max(dilation // 2, 1),
+                downsample, BatchNorm,
+            ))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(
-                block(self.inplanes,
-                      planes,
-                      dilation=dilation,
-                      BatchNorm=BatchNorm))
+                block(
+                    self.inplanes,
+                    planes,
+                    dilation=dilation,
+                    BatchNorm=BatchNorm,
+                ))
 
         return nn.Sequential(*layers)
 
@@ -181,10 +214,23 @@ class ResNet(nn.Module):
 
 
 class Decode_Block(nn.Module):
-    def __init__(self, in_chans, out_chans, kernel_size, stride, padding=0):
+    def __init__(
+            self,
+            in_chans,
+            out_chans,
+            kernel_size,
+            stride,
+            padding=0,
+    ):
         super().__init__()
-        self.linear = nn.ConvTranspose2d(in_chans, out_chans, kernel_size, stride, padding=padding, bias=False)
-        self.linear2 = nn.Conv2d(out_chans, out_chans, kernel_size=1, bias=False)
+        self.linear = nn.ConvTranspose2d(
+            in_chans, out_chans, kernel_size, stride,
+            padding=padding, bias=False,
+        )
+        self.linear2 = nn.Conv2d(
+            out_chans, out_chans,
+            kernel_size=1, bias=False,
+        )
 
     def forward(self, x):
         x = self.linear(x)
@@ -193,8 +239,22 @@ class Decode_Block(nn.Module):
 
 
 class ResNet_TopDown(ResNet):
-    def __init__(self, block, layers, output_stride, BatchNorm, freeze_at=0, use_mask=False):
-        super().__init__(block, layers, output_stride, BatchNorm, freeze_at)
+    def __init__(
+            self,
+            block,
+            layers,
+            output_stride,
+            BatchNorm,
+            freeze_at=0,
+            use_mask=False,
+    ):
+        super().__init__(
+            block,
+            layers,
+            output_stride,
+            BatchNorm,
+            freeze_at,
+        )
         dims = [64, 256, 512, 1024]
         self.downsample_layers = []
         self.downsample_layers.append(
@@ -211,20 +271,30 @@ class ResNet_TopDown(ResNet):
         self.decoders = nn.ModuleList()
         self.decoders.append(
             nn.Sequential(
-                nn.ConvTranspose2d(dims[0], dims[0], 3, 2, 1), # maxpool
-                Decode_Block(dims[0], 3, kernel_size=7, stride=2, padding=3), # conv1
+                nn.ConvTranspose2d(dims[0], dims[0], 3, 2, 1),  # maxpool
+                Decode_Block(
+                    dims[0], 3, kernel_size=7,
+                    stride=2, padding=3,
+                ),  # conv1
             ))
         for i in range(3):
             self.decoders.append(
                 Decode_Block(
-                    dims[i + 1], dims[i], kernel_size=3, stride=self.strides[i], padding=1,
+                    dims[i + 1], dims[i], kernel_size=3,
+                    stride=self.strides[i], padding=1,
                 ))
-        self.prompt = torch.nn.parameter.Parameter(torch.randn(dims[-1]), requires_grad=True)
-        self.top_down_transform = torch.nn.parameter.Parameter(torch.eye(dims[-1]), requires_grad=True)
+        self.prompt = torch.nn.parameter.Parameter(
+            torch.randn(dims[-1]), requires_grad=True)
+        self.top_down_transform = torch.nn.parameter.Parameter(
+            torch.eye(dims[-1]), requires_grad=True)
 
         self.use_mask = use_mask
 
-    def forward_features(self, x, td=None):
+    def forward_features(
+            self,
+            x,
+            td=None,
+    ):
         in_var = []
         out_var = []
         for i in range(4):
@@ -235,20 +305,28 @@ class ResNet_TopDown(ResNet):
             out_var.append(x)
         return x, in_var, out_var
 
-    def feedback(self, x):
+    def feedback(
+            self,
+            x,
+    ):
         td = []
         for depth in range(len(self.decoders) - 1, -1, -1):
             x, out = self.decoders[depth](x)
             td = [out] + td
         return td
 
-    def forward(self, x, mask=None):
+    def forward(
+            self,
+            x,
+            mask=None,
+    ):
         input = x
         x, _, out_var = self.forward_features(input)
 
         if self.use_mask:
             mask = mask.detach().float()
-            mask = transformF.resize(mask, x.shape[2:], InterpolationMode.BILINEAR)
+            mask = transformF.resize(
+                mask, x.shape[2:], InterpolationMode.BILINEAR)
         else:
             cos_sim = (F.normalize(x, dim=1) * F.normalize(
                 self.prompt[None, ..., None, None], dim=1)).sum(dim=1, keepdim=True)  # B, N, 1
@@ -263,7 +341,12 @@ class ResNet_TopDown(ResNet):
 
         return out_var[1:] + [out_var[-1]], var_loss
 
-    def var_loss(self, in_var, out_var, x):
+    def var_loss(
+            self,
+            in_var,
+            out_var,
+            x,
+    ):
         recon_loss = []
         for depth in range(len(self.decoders) - 1, -1, -1):
             recon, out = self.decoders[depth](out_var[depth].detach())
@@ -273,41 +356,59 @@ class ResNet_TopDown(ResNet):
         return sum(recon_loss)
 
 
-def ResNet50(output_stride, BatchNorm, freeze_at=0):
+def ResNet50(
+        output_stride,
+        BatchNorm,
+        freeze_at=0,
+):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 6, 3],
-                   output_stride,
-                   BatchNorm,
-                   freeze_at=freeze_at)
+    model = ResNet(
+        Bottleneck, [3, 4, 6, 3],
+        output_stride,
+        BatchNorm,
+        freeze_at=freeze_at,
+    )
     return model
 
 
-def ResNet50_TopDown(output_stride, BatchNorm, freeze_at=0, use_mask=False):
+def ResNet50_TopDown(
+        output_stride,
+        BatchNorm,
+        freeze_at=0,
+        use_mask=False,
+):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_TopDown(Bottleneck, [3, 4, 6, 3],
-                   output_stride,
-                   BatchNorm,
-                   freeze_at=freeze_at,
-                   use_mask=use_mask,
-                )
+    model = ResNet_TopDown(
+        Bottleneck, [3, 4, 6, 3],
+        output_stride,
+        BatchNorm,
+        freeze_at=freeze_at,
+        use_mask=use_mask,
+    )
     return model
 
 
-def ResNet101(output_stride, BatchNorm, freeze_at=0):
+def ResNet101(
+        output_stride,
+        BatchNorm,
+        freeze_at=0,
+):
     """Constructs a ResNet-101 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(Bottleneck, [3, 4, 23, 3],
-                   output_stride,
-                   BatchNorm,
-                   freeze_at=freeze_at)
+    model = ResNet(
+        Bottleneck, [3, 4, 23, 3],
+        output_stride,
+        BatchNorm,
+        freeze_at=freeze_at,
+    )
     return model
 
 
