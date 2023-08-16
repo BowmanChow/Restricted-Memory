@@ -132,10 +132,10 @@ class SoftJaccordLoss(nn.Module):
                                                 ignore=self.ignore_index),
                                 alpha=1.0,
                                 beta=1.0)
-            if loss != 0:
-                total_loss.append(loss.unsqueeze(0))
-            else:
-                total_loss.append(torch.zeros(1).cuda())
+            # if loss != 0:
+            total_loss.append(loss.unsqueeze(0))
+            # else:
+            #     total_loss.append(torch.zeros(1).cuda())
         total_loss = torch.cat(total_loss, dim=0)
         return total_loss
 
@@ -185,10 +185,10 @@ class CrossEntropyLoss(nn.Module):
                                                        dim=1)
 
                 final_loss = torch.mean(top_k_loss)
-            if final_loss != 0:
-                final_loss = final_loss.unsqueeze(0)
-            else:
-                final_loss = torch.zeros(1).cuda()
+            # if final_loss != 0:
+            final_loss = final_loss.unsqueeze(0)
+            # else:
+            #     final_loss = torch.zeros(1).cuda()
             total_loss.append(final_loss)
         total_loss = torch.cat(total_loss, dim=0)
         return total_loss
