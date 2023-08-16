@@ -536,8 +536,10 @@ class Trainer(object):
         self.print_log('Start training:')
         model.train()
         while step < cfg.TRAIN_TOTAL_STEPS:
+            print(f"{step = }")
             train_sampler.set_epoch(epoch)
             epoch += 1
+            print(f"{epoch = }")
             last_time = time.time()
             for frame_idx, sample in enumerate(train_loader):
                 if step > cfg.TRAIN_TOTAL_STEPS:
