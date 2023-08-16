@@ -5,7 +5,9 @@ class ModelConfig(DefaultModelConfig):
     def __init__(self):
         super().__init__()
         self.USE_MASK = False
-        self.MODEL_NAME = 'R50_AOTL'
+        self.NO_LONG_MEMORY = False
+        long_mem_text = "_No_long_mem" if self.NO_LONG_MEMORY else ""
+        self.MODEL_NAME = f'R50_AOTL{long_mem_text}'
 
         self.MODEL_ENCODER = 'resnet50'
         self.MODEL_ENCODER_PRETRAIN = './pretrain_models/resnet50-0676ba61.pth'  # https://download.pytorch.org/models/resnet50-0676ba61.pth

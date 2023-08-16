@@ -303,7 +303,8 @@ class AOTEngine(nn.Module):
                 curr_one_hot_mask, curr_ignore_mask)
 
         is_update_long_memory = False
-        if self.frame_step - self.last_mem_step >= self.long_term_mem_gap:
+        if (not (hasattr(self.cfg, "NO_LONG_MEMORY") and self.cfg.NO_LONG_MEMORY)) \
+                and self.frame_step - self.last_mem_step >= self.long_term_mem_gap:
             is_update_long_memory = True
             self.last_mem_step = self.frame_step
         self.AOT.update_short_term_memory(
