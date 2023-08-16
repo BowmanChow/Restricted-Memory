@@ -21,6 +21,7 @@ class Evaluation(object):
         :param sequences: Sequences to consider for the evaluation, 'all' to use all the sequences in a set.
         """
         self.dataset_root = dataset_root
+        print(f"Evaluate on dataset = {self.dataset_root}")
         self.dataset = Dataset(root=dataset_root, subset=gt_set, sequences=sequences)
 
     @staticmethod

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from source.evaluation import Evaluation
 
-default_dataset_path = ''
+default_dataset_path = '../aot_plus/datasets/VOST'
 
 time_start = time()
 parser = argparse.ArgumentParser()
