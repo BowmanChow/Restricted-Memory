@@ -3,6 +3,8 @@ import os
 import time
 import datetime as datetime
 import json
+from typing import List
+import pathlib
 
 import numpy as np
 import torch
@@ -20,6 +22,7 @@ from utils.eval import zip_folder
 
 from networks.models import build_vos_model
 from networks.engines import build_engine
+from networks.engines.aot_engine import AOTEngine, AOTInferEngine
 
 
 class Evaluator(object):
