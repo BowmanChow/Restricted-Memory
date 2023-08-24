@@ -85,13 +85,13 @@ def load_network(net, pretrained_dir, gpu):
     pretrained_dict_update = {}
     pretrained_dict_remove = []
     for k, v in pretrained_dict.items():
-        if k in model_dict and (len(v.shape) > 2 and v.shape[1] != model_dict[k].shape[1]):
+        if k in model_dict and (len(v.shape) > 2 and v.shape[0] == model_dict[k].shape[0] and v.shape[1] == (model_dict[k].shape[1]-1)):
             model_dict[k][:, :-1, :, :] = v
             continue
-        if k in model_dict:
+        if k in model_dict and v.shape == model_dict[k].shape:
             pretrained_dict_update[k] = v
         elif k[:7] == 'module.':
-            if k[7:] in model_dict:
+            if k[7:] in model_dict and v.shape == model_dict[k[7:]].shape:
                 pretrained_dict_update[k[7:]] = v
         else:
             pretrained_dict_remove.append(k)
