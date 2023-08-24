@@ -25,7 +25,7 @@ class MultiheadAttention(nn.Module):
         self.projection = nn.Linear(d_model, d_model)
         self._init_weight()
 
-    def forward(self, Q, K, V):
+    def forward(self, Q, K, V, is_return_attn_weight=False):
         """
         :param Q: A 3d tensor with shape of [T_q, bs, C_q]
         :param K: A 3d tensor with shape of [T_k, bs, C_k]
@@ -42,25 +42,34 @@ class MultiheadAttention(nn.Module):
             K = self.linear_K(K)
             V = self.linear_V(V)
 
-        # Scale
-        Q = Q / self.T
+        if is_return_attn_weight:
+            # Scale
+            Q = Q / self.T
 
-        # Multi-head
-        Q = Q.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
-        K = K.view(-1, bs, num_head, hidden_dim).permute(1, 2, 3, 0)
-        V = V.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
+            # Multi-head
+            Q = Q.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
+            K = K.view(-1, bs, num_head, hidden_dim).permute(1, 2, 3, 0)
+            V = V.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
 
-        # Multiplication
-        QK = Q @ K
+            # Multiplication
+            QK = Q @ K
 
-        # Activation
-        attn = torch.softmax(QK, dim=-1)
+            # Activation
+            attn = torch.softmax(QK, dim=-1)
 
-        # Dropouts
-        attn = self.dropout(attn)
+            # Dropouts
+            attn = self.dropout(attn)
 
-        # Weighted sum
-        outputs = (attn @ V).permute(2, 0, 1, 3)
+            # Weighted sum
+            outputs = (attn @ V).permute(2, 0, 1, 3)
+        else:
+            dropout_p = self.drop_prob if self.training else 0.0
+            Q = Q.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
+            K = K.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
+            V = V.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
+            outputs = F.scaled_dot_product_attention(Q, K, V, None, dropout_p, is_causal=False)
+            outputs = outputs.permute(2, 0, 1, 3)
+            attn = None
 
         # Restore shape
         outputs = outputs.reshape(-1, bs, self.d_model)
