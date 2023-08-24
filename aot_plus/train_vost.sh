@@ -19,13 +19,15 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 	--model ${model} \
 	--gpu_num ${gpu_num} \
 	--batch_size 2 \
-	# --log ./debug_logs
+	# --log ./debug_logs \
+	# --fix
 
 
 dataset="vost"
 split="val"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
-	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0
+	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0 \
+	# --fix
 
 
 model_name=$(python -c "from configs.models.$model import ModelConfig ;print(ModelConfig().MODEL_NAME)")

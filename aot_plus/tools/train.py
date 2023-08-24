@@ -1,3 +1,24 @@
+import sys
+if sys.argv[-1] == "--fix":
+    print(f"Fix random seed")
+    import os
+    os.environ['CUDNN_DETERMINISTIC'] = '1'
+    os.environ['PYTHONHASHSEED'] = str(10)
+    os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
+    import random
+    random.seed(10)
+    import numpy as np
+    np.random.seed(10)
+    import torch
+    torch.manual_seed(10)
+    torch.cuda.manual_seed(10)
+    torch.cuda.manual_seed_all(10)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
+    # torch.use_deterministic_algorithms(True)
+
+    sys.argv.pop(-1)
+
 import importlib
 import os
 import random
