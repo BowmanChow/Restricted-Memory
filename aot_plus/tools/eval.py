@@ -76,6 +76,7 @@ def main():
     parser.set_defaults(amp=False)
 
     parser.add_argument('--log', type=str, default='./eval_logs')
+    parser.add_argument('--eval_name', type=str, default='debug')
 
     args = parser.parse_args()
 
@@ -108,6 +109,8 @@ def main():
 
     cfg.TEST_MIN_SIZE = None
     cfg.TEST_MAX_SIZE = args.max_resolution * 800. / 480.
+
+    setattr(cfg, "EVAL_NAME", args.eval_name)
 
     if args.gpu_num > 1:
         mp.set_start_method('spawn')

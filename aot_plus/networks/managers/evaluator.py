@@ -195,7 +195,7 @@ class Evaluator(object):
             )
 
         elif cfg.TEST_DATASET == 'vost':
-            eval_name = 'debug'
+            eval_name = cfg.EVAL_NAME
             self.result_root = os.path.join(
                 cfg.DIR_EVALUATION,
                 cfg.TEST_DATASET, eval_name,
