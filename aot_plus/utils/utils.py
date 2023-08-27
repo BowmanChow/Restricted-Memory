@@ -52,7 +52,7 @@ def make_log_dir(log_dir: str, name: str):
 
 
 IGNORE_FOLDER_LIST = [
-    '__pycache__', 'dataset', 'datasets', 'logs', 'debug_logs', 'outputs', 'results']
+    '__pycache__', 'dataset', 'datasets', 'logs', 'debug_logs', 'eval_logs', 'outputs', 'results']
 INCLUDE_EXTENSION_LIST = ['.py', '.sh']
 
 
