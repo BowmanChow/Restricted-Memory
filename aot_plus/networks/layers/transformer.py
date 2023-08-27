@@ -189,7 +189,7 @@ class LongShortTermTransformer(nn.Module):
                 new_long_term_memory,
                 last_long_term_memory,
             ):
-                new_mem = torch.cat([new_e, last_e], dim=0)
+                new_mem = torch.cat([last_e, new_e[None, ...]], dim=0)
                 updated_e.append(new_mem)
             updated_long_term_memories.append(updated_e)
         self.long_term_memories = updated_long_term_memories
@@ -321,6 +321,8 @@ class SimplifiedTransformerBlock(nn.Module):
             global_V = self.linear_V(curr_V + curr_id_emb)
             local_K = global_K
             local_V = global_V
+            global_K = global_K[None, ...]
+            global_V = global_V[None, ...]
         else:
             global_K, global_V = long_term_memory
             local_K, local_V = short_term_memory
@@ -328,11 +330,11 @@ class SimplifiedTransformerBlock(nn.Module):
         if self.joint_longatt:
             tgt2 = self.long_term_attn(
                 curr_Q,
-                torch.cat((global_K, curr_K), 0),
-                torch.cat((global_V, curr_V), 0),
+                torch.cat((global_K.flatten(0,1), curr_K), 0),
+                torch.cat((global_V.flatten(0,1), curr_V), 0),
             )[0]
         else:
-            tgt2 = self.long_term_attn(curr_Q, global_K, global_V)[0]
+            tgt2 = self.long_term_attn(curr_Q, global_K.flatten(0,1), global_V.flatten(0,1))[0]
 
         if self.linear_q:
             tgt3 = self.short_term_attn(
