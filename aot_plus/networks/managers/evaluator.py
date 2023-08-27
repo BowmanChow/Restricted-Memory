@@ -305,6 +305,7 @@ class Evaluator(object):
                 num_frames = len(seq_dataset)
                 max_gap = int(round(num_frames / 30))
                 gap = max(max_gap, 5)
+                print(f"{num_frames = }  {gap = }  long term memry frames : {num_frames / gap}")
 
                 for frame_idx, samples in enumerate(tqdm(seq_dataloader)):
 
