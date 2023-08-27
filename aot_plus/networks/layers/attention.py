@@ -67,7 +67,9 @@ class MultiheadAttention(nn.Module):
             Q = Q.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
             K = K.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
             V = V.view(-1, bs, num_head, hidden_dim).permute(1, 2, 0, 3)
-            outputs = F.scaled_dot_product_attention(Q, K, V, None, dropout_p, is_causal=False)
+            enable_mem_efficient = False if self.training else True
+            with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=True, enable_mem_efficient=enable_mem_efficient):
+                outputs = F.scaled_dot_product_attention(Q, K, V, None, dropout_p, is_causal=False)
             outputs = outputs.permute(2, 0, 1, 3)
             attn = None
 
