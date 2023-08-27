@@ -46,7 +46,6 @@ class LongShortTermTransformer(nn.Module):
         return_intermediate=False,
         intermediate_norm=True,
         final_norm=True,
-        simplified=False,
         stopgrad=False,
         joint_longatt=False,
         linear_q=False,
@@ -71,17 +70,16 @@ class LongShortTermTransformer(nn.Module):
                     droppath_rate = droppath * idx / (num_layers - 1)
             else:
                 droppath_rate = droppath
-            if simplified:
-                layers.append(
-                    SimplifiedTransformerBlock(
-                        d_model, self_nhead, att_nhead,
-                        dim_feedforward, droppath_rate,
-                        activation,
-                        stopgrad=stopgrad,
-                        joint_longatt=joint_longatt,
-                        linear_q=linear_q,
-                        recurrent_stm=recurrent_stm,
-                    ))
+            layers.append(
+                SimplifiedTransformerBlock(
+                    d_model, self_nhead, att_nhead,
+                    dim_feedforward, droppath_rate,
+                    activation,
+                    stopgrad=stopgrad,
+                    joint_longatt=joint_longatt,
+                    linear_q=linear_q,
+                    recurrent_stm=recurrent_stm,
+                ))
         self.layers = nn.ModuleList(layers)
 
         num_norms = num_layers - 1 if intermediate_norm else 0
@@ -94,7 +92,6 @@ class LongShortTermTransformer(nn.Module):
         if self.decoder_norms is not None:
             self.decoder_norms = nn.ModuleList(self.decoder_norms)
 
-        self.simplified = simplified
         self.recurrent_stm = recurrent_stm
 
         self.clear_memory()
@@ -166,18 +163,10 @@ class LongShortTermTransformer(nn.Module):
                 self.lstt_short_memories[layer_idx][0] = self.lstt_curr_memories[layer_idx][0]
                 self.lstt_short_memories[layer_idx][1] = self.lstt_curr_memories[layer_idx][1]
 
-            if self.simplified:
-                lstt_curr_memories_2d.append([
-                    self.lstt_short_memories[layer_idx][0],
-                    self.lstt_short_memories[layer_idx][1],
-                ])
-            else:
-                lstt_curr_memories_2d.append([
-                    seq_to_2d(
-                        self.lstt_short_memories[layer_idx][0], self.enc_size_2d),
-                    seq_to_2d(
-                        self.lstt_short_memories[layer_idx][1], self.enc_size_2d),
-                ])
+            lstt_curr_memories_2d.append([
+                self.lstt_short_memories[layer_idx][0],
+                self.lstt_short_memories[layer_idx][1],
+            ])
 
         self.short_term_memories_list.append(lstt_curr_memories_2d)
         for temp in self.short_term_memories_list[0]:

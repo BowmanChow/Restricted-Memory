@@ -18,7 +18,6 @@ class EngineConfig(DefaultEngineConfig):
         self.TRAIN_SEQ_TRAINING_START_RATIO = 1.0
         self.TRAIN_AUX_LOSS_RATIO = 0.1
 
-        self.MODEL_SIMPLIFIED_STM = True
         self.MODEL_LINEAR_Q = True
         self.MODEL_RECURRENT_STM = True
         self.MODEL_JOINT_LONGATT = True

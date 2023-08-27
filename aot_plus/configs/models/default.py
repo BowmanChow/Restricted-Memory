@@ -10,7 +10,6 @@ class DefaultModelConfig():
         self.MODEL_ENCODER_DIM = [24, 32, 96, 1280]  # 4x, 8x, 16x, 16x
         self.MODEL_ENCODER_EMBEDDING_DIM = 256
         self.MODEL_DECODER_INTERMEDIATE_LSTT = True
-        self.MODEL_SIMPLIFIED_STM = True
         self.MODEL_STM_STOPGRAD = False
         self.MODEL_LINEAR_Q = True
         self.MODEL_NORM_INP = True
