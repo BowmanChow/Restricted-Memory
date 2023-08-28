@@ -13,7 +13,6 @@ class DefaultModelConfig():
         self.MODEL_STM_STOPGRAD = False
         self.MODEL_LINEAR_Q = True
         self.MODEL_NORM_INP = True
-        self.MODEL_RECURRENT_STM = True
         self.MODEL_JOINT_LONGATT = True
         self.MODEL_FREEZE_BN = True
         self.MODEL_FREEZE_BACKBONE = False

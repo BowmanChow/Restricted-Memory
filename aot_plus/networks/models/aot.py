@@ -43,7 +43,6 @@ class AOT(nn.Module):
             joint_longatt=cfg.MODEL_JOINT_LONGATT,
             linear_q=cfg.MODEL_LINEAR_Q,
             norm_inp=cfg.MODEL_NORM_INP,
-            recurrent_stm=cfg.MODEL_RECURRENT_STM,
         )
 
         decoder_indim = cfg.MODEL_ENCODER_EMBEDDING_DIM * \

@@ -15,7 +15,6 @@ class EngineConfig(DefaultEngineConfig):
         self.TRAIN_LONG_TERM_MEM_GAP = 4
         self.MODEL_LINEAR_Q = False
         self.MODEL_JOINT_LONGATT = False
-        self.MODEL_RECURRENT_STM = True
         self.MODEL_IGNORE_TOKEN = True
 
         self.PRETRAIN_FULL = True  # if False, load encoder only

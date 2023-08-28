@@ -49,7 +49,6 @@ class LongShortTermTransformer(nn.Module):
         stopgrad=False,
         joint_longatt=False,
         linear_q=False,
-        recurrent_stm=False,
         norm_inp=False,
     ):
 
@@ -78,7 +77,6 @@ class LongShortTermTransformer(nn.Module):
                     stopgrad=stopgrad,
                     joint_longatt=joint_longatt,
                     linear_q=linear_q,
-                    recurrent_stm=recurrent_stm,
                 ))
         self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(layers)
 
@@ -91,8 +89,6 @@ class LongShortTermTransformer(nn.Module):
 
         if self.decoder_norms is not None:
             self.decoder_norms = nn.ModuleList(self.decoder_norms)
-
-        self.recurrent_stm = recurrent_stm
 
         self.clear_memory()
 
@@ -171,14 +167,10 @@ class LongShortTermTransformer(nn.Module):
                 curr_v + curr_id_emb)
             self.lstt_curr_memories[layer_idx][1] = curr_v
 
-            if self.recurrent_stm:
-                curr_v = self.lstt_short_memories[layer_idx][1]
-                curr_v = self.layers[layer_idx].linear_VMem(
-                    curr_v + curr_id_emb)
-                self.lstt_short_memories[layer_idx][1] = curr_v
-            else:
-                self.lstt_short_memories[layer_idx][0] = self.lstt_curr_memories[layer_idx][0]
-                self.lstt_short_memories[layer_idx][1] = self.lstt_curr_memories[layer_idx][1]
+            curr_v = self.lstt_short_memories[layer_idx][1]
+            curr_v = self.layers[layer_idx].linear_VMem(
+                curr_v + curr_id_emb)
+            self.lstt_short_memories[layer_idx][1] = curr_v
 
             lstt_curr_memories_2d.append([
                 self.lstt_short_memories[layer_idx][0],
@@ -238,7 +230,6 @@ class SimplifiedTransformerBlock(nn.Module):
         stopgrad=False,
         joint_longatt=False,
         linear_q=False,
-        recurrent_stm=False,
     ):
         super().__init__()
 
@@ -296,7 +287,6 @@ class SimplifiedTransformerBlock(nn.Module):
         self.stopgrad = stopgrad
         self.joint_longatt = joint_longatt
         self.linear_q = linear_q
-        self.recurrent_stm = recurrent_stm
         self._init_weight()
 
     def with_pos_embed(self, tensor, pos=None):
@@ -385,13 +375,12 @@ class SimplifiedTransformerBlock(nn.Module):
                     self.norm4(local_V + curr_V),
                 )[0]
 
-        if self.recurrent_stm:
-            _tgt3 = tgt3
+        _tgt3 = tgt3
 
-            local_K = self.linear_QMem(_tgt3)
-            local_V = _tgt3
-            if curr_id_emb is not None:
-                local_V = self.linear_VMem(local_V + curr_id_emb)
+        local_K = self.linear_QMem(_tgt3)
+        local_V = _tgt3
+        if curr_id_emb is not None:
+            local_V = self.linear_VMem(local_V + curr_id_emb)
 
         tgt = tgt + tgt2 + tgt3
 
