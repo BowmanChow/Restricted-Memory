@@ -102,6 +102,7 @@ class LongShortTermTransformer(nn.Module):
         curr_id_emb=None,
         self_pos=None,
         size_2d=None,
+        temporal_encoding=None,
         is_outer_memory=False,
         outer_long_memories=None,
         outer_short_memories=None,
@@ -121,6 +122,7 @@ class LongShortTermTransformer(nn.Module):
                     curr_id_emb=curr_id_emb,
                     self_pos=self_pos,
                     size_2d=size_2d,
+                    temporal_encoding=temporal_encoding,
                 )
             else:
                 output, memories = layer(
@@ -132,6 +134,7 @@ class LongShortTermTransformer(nn.Module):
                     curr_id_emb=curr_id_emb,
                     self_pos=self_pos,
                     size_2d=size_2d,
+                    temporal_encoding=temporal_encoding,
                 )
             # memories : [[curr_K, curr_V], [global_K, global_V], [local_K, local_V]]
 
@@ -311,6 +314,7 @@ class SimplifiedTransformerBlock(nn.Module):
         curr_id_emb=None,
         self_pos=None,
         size_2d=(30, 30),
+        temporal_encoding=None,
     ):
 
         # Self-attention
@@ -341,14 +345,21 @@ class SimplifiedTransformerBlock(nn.Module):
             global_K, global_V = long_term_memory
             local_K, local_V = short_term_memory
 
+        if temporal_encoding is None:
+            flatten_global_K = global_K.flatten(0, 1)
+            flatten_global_V = global_V.flatten(0, 1)
+        else:
+            flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
+            flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
+
         if self.joint_longatt:
             tgt2 = self.long_term_attn(
                 curr_Q,
-                torch.cat((global_K.flatten(0,1), curr_K), 0),
-                torch.cat((global_V.flatten(0,1), curr_V), 0),
+                torch.cat((flatten_global_K, curr_K), 0),
+                torch.cat((flatten_global_V, curr_V), 0),
             )[0]
         else:
-            tgt2 = self.long_term_attn(curr_Q, global_K.flatten(0,1), global_V.flatten(0,1))[0]
+            tgt2 = self.long_term_attn(curr_Q, flatten_global_K, flatten_global_V)[0]
 
         if self.linear_q:
             tgt3 = self.short_term_attn(

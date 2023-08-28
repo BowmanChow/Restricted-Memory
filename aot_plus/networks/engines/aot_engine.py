@@ -11,6 +11,7 @@ from utils.image import one_hot_mask
 from networks.layers.basic import seq_to_2d
 from networks.models.aot import AOT
 
+from networks.layers.position import get_temporal_positional_encoding
 
 class AOTEngine(nn.Module):
     def __init__(
@@ -274,6 +275,16 @@ class AOTEngine(nn.Module):
             self.pos_emb = self.AOT.get_pos_emb(curr_enc_embs[-1]).expand(
                 self.batch_size, -1, -1, -1,
             ).view(self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
+        if "time_encode" in self.cfg.EXP_NAME:
+            self.temporal_encoding = get_temporal_positional_encoding(
+                max_sequence_len=500,
+                channels=curr_enc_embs[-1].size()[1],
+                device=curr_enc_embs[-1].device,
+                is_normalize=True,
+                # is_debug=True,
+            )
+        else:
+            self.temporal_encoding = None
 
         curr_id_emb = self.assign_identity(curr_one_hot_mask)
         self.curr_id_embs = curr_id_emb
@@ -284,6 +295,8 @@ class AOTEngine(nn.Module):
             curr_id_emb,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
+            temporal_encoding=self.temporal_encoding[0:1, ...]
+            if self.temporal_encoding is not None else None,
         )
 
         self.last_mem_step = frame_step
@@ -332,6 +345,9 @@ class AOTEngine(nn.Module):
             None,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
+            temporal_encoding=self.temporal_encoding[
+                0:self.frame_step:self.long_term_mem_gap, ...]
+            if self.temporal_encoding is not None else None,
         )
 
         return self.decode_current_logits(curr_enc_embs, curr_lstt_output, output_size=output_size)

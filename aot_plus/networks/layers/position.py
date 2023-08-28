@@ -1,3 +1,5 @@
+import numpy as np
+from matplotlib import pyplot as plt
 import math
 
 import torch
@@ -89,3 +91,68 @@ class PositionEmbeddingLearned(nn.Module):
         if h != self.H or w != self.W:
             pos_emb = F.interpolate(pos_emb, size=(h, w), mode="bilinear")
         return pos_emb
+
+
+def get_temporal_positional_encoding(
+        max_sequence_len,
+        channels,
+        device,
+        is_normalize=False,
+        scale=2*math.pi,
+        is_debug=False,
+):
+    position = torch.arange(max_sequence_len, device=device)
+    if is_normalize:
+        position = position / position[-1] * scale
+    if is_debug:
+        print(f"{position = }")
+    position.unsqueeze_(1)
+    div_term = 1.0 / (10000.0 ** (
+        torch.arange(0, channels, 2, device=device).float() / channels))
+    position_div_term = position * div_term
+
+    temporal_encoding = torch.zeros(
+        (max_sequence_len, 1, 1, channels), device=device)
+    temporal_encoding_sin = torch.sin(position_div_term)
+    temporal_encoding_cos = torch.cos(position_div_term)
+    temporal_encoding[:, 0, 0, 0::2] = temporal_encoding_sin
+    temporal_encoding[:, 0, 0, 1::2] = temporal_encoding_cos
+
+    if is_debug:
+        position_np = position.detach().cpu().numpy()
+        position_div_term_np = position_div_term.detach().cpu().numpy()
+        for i, p in enumerate(position_np[:0x10]):
+            plt.plot(
+                np.arange(position_div_term_np.shape[1]),
+                position_div_term_np[i],
+                label=f"line {p}",
+            )
+        plt.legend()
+        plt.savefig("position_div_term.png")
+        plt.close()
+        temporal_encoding_sin_np = temporal_encoding_sin.detach().cpu().numpy()
+        for i, p in enumerate(position_np[:0x10]):
+            plt.subplot(4, 4, i+1)
+            plt.plot(
+                np.arange(temporal_encoding_sin_np.shape[1]),
+                temporal_encoding_sin_np[i],
+                label=f"line {p}",
+            )
+            plt.ylim(-1.05, 1.05)
+            # plt.legend()
+        plt.savefig("temporal_encoding_sin.png", dpi=300)
+        plt.close()
+        temporal_encoding_cos_np = temporal_encoding_cos.detach().cpu().numpy()
+        for i, p in enumerate(position_np[:0x10]):
+            plt.subplot(4, 4, i+1)
+            plt.plot(
+                np.arange(temporal_encoding_cos_np.shape[1]),
+                temporal_encoding_cos_np[i],
+                label=f"line {p}",
+            )
+            plt.ylim(-1.05, 1.05)
+            # plt.legend()
+        plt.savefig("temporal_encoding_cos.png", dpi=300)
+        plt.close()
+
+    return temporal_encoding
