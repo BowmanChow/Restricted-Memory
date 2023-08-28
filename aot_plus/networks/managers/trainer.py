@@ -629,6 +629,8 @@ class Trainer(object):
                             tf_board=tf_board,
                             use_prev_prob=use_prev_prob,
                         )
+                        if cfg.DEBUG_FIX_RANDOM:
+                            print(f"Loss {loss} | ")
                         loss = torch.mean(loss)
 
                     self.scaler.scale(loss).backward()
@@ -650,6 +652,8 @@ class Trainer(object):
                         tf_board=tf_board,
                         use_prev_prob=use_prev_prob,
                     )
+                    if cfg.DEBUG_FIX_RANDOM:
+                        print(f"Loss {loss} | ")
                     loss = torch.mean(loss)
 
                     torch.nn.utils.clip_grad_norm_(

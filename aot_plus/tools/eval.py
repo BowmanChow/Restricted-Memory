@@ -1,5 +1,6 @@
 import sys
-if sys.argv[-1] == "--fix":
+if sys.argv[-1] == "--fix_random":
+    print(f"Fix random seed")
     import os
     os.environ['CUDNN_DETERMINISTIC'] = '1'
     os.environ['PYTHONHASHSEED'] = str(10)
@@ -15,8 +16,6 @@ if sys.argv[-1] == "--fix":
     torch.backends.cudnn.deterministic=True
     torch.backends.cudnn.benchmark = False
     # torch.use_deterministic_algorithms(True)
-
-    sys.argv.pop(-1)
 
 import importlib
 import sys
@@ -78,6 +77,9 @@ def main():
     parser.add_argument('--log', type=str, default='./eval_logs')
     parser.add_argument('--eval_name', type=str, default='debug')
 
+    parser.add_argument('--fix_random', action='store_true')
+    parser.set_defaults(fix_random=False)
+
     args = parser.parse_args()
 
     spec = importlib.util.spec_from_file_location("config", f"{args.result_path}/config.py")
@@ -111,6 +113,7 @@ def main():
     cfg.TEST_MAX_SIZE = args.max_resolution * 800. / 480.
 
     setattr(cfg, "EVAL_NAME", args.eval_name)
+    setattr(cfg, "DEBUG_FIX_RANDOM", args.fix_random)
 
     if args.gpu_num > 1:
         mp.set_start_method('spawn')

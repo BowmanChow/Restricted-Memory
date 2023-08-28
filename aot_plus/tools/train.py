@@ -1,5 +1,5 @@
 import sys
-if sys.argv[-1] == "--fix":
+if sys.argv[-1] == "--fix_random":
     print(f"Fix random seed")
     import os
     os.environ['CUDNN_DETERMINISTIC'] = '1'
@@ -16,8 +16,6 @@ if sys.argv[-1] == "--fix":
     torch.backends.cudnn.deterministic=True
     torch.backends.cudnn.benchmark = False
     # torch.use_deterministic_algorithms(True)
-
-    sys.argv.pop(-1)
 
 import importlib
 import os
@@ -67,6 +65,9 @@ def main():
 
     parser.add_argument('--log', type=str, default='./logs')
 
+    parser.add_argument('--fix_random', action='store_true')
+    parser.set_defaults(fix_random=False)
+
     args = parser.parse_args()
 
     cfg = get_config(args.stage, args.exp_name, args.model)
@@ -103,6 +104,8 @@ def main():
         cfg.DIST_URL = args.dist_url
 
     cfg.save_self()
+
+    setattr(cfg, "DEBUG_FIX_RANDOM", args.fix_random)
 
     if cfg.TRAIN_GPUS == 1:
         main_worker(0, cfg, args.amp, args.exp_name, log_dir=log_dir) 

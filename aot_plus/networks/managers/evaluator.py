@@ -395,6 +395,8 @@ class Evaluator(object):
                             else:
                                 pred_logit = engine.match_propogate_one_frame(
                                     current_img, output_size=(ori_height, ori_width))
+                            if cfg.DEBUG_FIX_RANDOM:
+                                print(f"{pred_logit[0, :7, 100, 100] = }")
 
                             if is_flipped:
                                 pred_logit = flip_tensor(pred_logit, 3)
