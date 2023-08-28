@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
+torch.set_printoptions(linewidth=328)
 from tqdm import tqdm
 
 from dataloaders.eval_datasets import YOUTUBEVOS_Test, YOUTUBEVOS_DenseTest, DAVIS_Test, EVAL_TEST, VOST_Test

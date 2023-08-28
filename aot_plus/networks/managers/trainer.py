@@ -10,6 +10,7 @@ import torch.optim as optim
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from torchvision import transforms
+torch.set_printoptions(linewidth=328)
 
 from dataloaders.train_datasets import DAVIS2017_Train, YOUTUBEVOS_Train, StaticTrain, TEST, VOST_Train, VISOR_Train
 import dataloaders.video_transforms as tr
