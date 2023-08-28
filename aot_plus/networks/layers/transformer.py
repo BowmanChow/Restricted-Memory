@@ -102,6 +102,9 @@ class LongShortTermTransformer(nn.Module):
         curr_id_emb=None,
         self_pos=None,
         size_2d=None,
+        is_outer_memory=False,
+        outer_long_memories=None,
+        outer_short_memories=None,
     ):
 
         output = self.emb_dropout(tgt)
@@ -110,16 +113,26 @@ class LongShortTermTransformer(nn.Module):
         intermediate_memories = []
 
         for idx, layer in enumerate(self.layers):
-            output, memories = layer(
-                output,
-                self.long_term_memories[idx] if
-                self.long_term_memories is not None else None,
-                self.short_term_memories[idx] if
-                self.short_term_memories is not None else None,
-                curr_id_emb=curr_id_emb,
-                self_pos=self_pos,
-                size_2d=size_2d,
-            )
+            if is_outer_memory:
+                output, memories = layer(
+                    output,
+                    outer_long_memories[idx],
+                    outer_short_memories[idx],
+                    curr_id_emb=curr_id_emb,
+                    self_pos=self_pos,
+                    size_2d=size_2d,
+                )
+            else:
+                output, memories = layer(
+                    output,
+                    self.long_term_memories[idx] if
+                    self.long_term_memories is not None else None,
+                    self.short_term_memories[idx] if
+                    self.short_term_memories is not None else None,
+                    curr_id_emb=curr_id_emb,
+                    self_pos=self_pos,
+                    size_2d=size_2d,
+                )
             # memories : [[curr_K, curr_V], [global_K, global_V], [local_K, local_V]]
 
             if self.return_intermediate:
@@ -140,8 +153,9 @@ class LongShortTermTransformer(nn.Module):
                             intermediate[idx])
 
         if self.return_intermediate:
-            self.lstt_curr_memories, self.lstt_long_memories, self.lstt_short_memories = zip(
-                *intermediate_memories)
+            if not is_outer_memory:
+                self.lstt_curr_memories, self.lstt_long_memories, self.lstt_short_memories = zip(
+                    *intermediate_memories)
             return intermediate
 
         return output
