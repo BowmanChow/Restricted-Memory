@@ -46,7 +46,6 @@ class LongShortTermTransformer(nn.Module):
         return_intermediate=False,
         intermediate_norm=True,
         final_norm=True,
-        stopgrad=False,
         joint_longatt=False,
         linear_q=False,
         norm_inp=False,
@@ -74,7 +73,6 @@ class LongShortTermTransformer(nn.Module):
                     d_model, self_nhead, att_nhead,
                     dim_feedforward, droppath_rate,
                     activation,
-                    stopgrad=stopgrad,
                     joint_longatt=joint_longatt,
                     linear_q=linear_q,
                 ))
@@ -227,7 +225,6 @@ class SimplifiedTransformerBlock(nn.Module):
         dim_feedforward=1024,
         droppath=0.1,
         activation="gelu",
-        stopgrad=False,
         joint_longatt=False,
         linear_q=False,
     ):
@@ -254,28 +251,11 @@ class SimplifiedTransformerBlock(nn.Module):
             use_linear=False,
         )
 
-        if not stopgrad:
-            self.short_term_attn = MultiheadAttention(
-                d_model,
-                att_nhead,
-                use_linear=False,
-            )
-        else:
-            try:
-                import spatial_correlation_sampler
-                MultiheadLocalAttention = MultiheadLocalAttentionV2
-            except Exception as inst:
-                print(inst)
-                print(
-                    "Failed to import PyTorch Correlation. For better efficiency, please install it."
-                )
-                MultiheadLocalAttention = MultiheadLocalAttentionV3
-            self.short_term_attn = MultiheadLocalAttention(
-                d_model,
-                att_nhead,
-                dilation=1,
-                use_linear=False,
-            )
+        self.short_term_attn = MultiheadAttention(
+            d_model,
+            att_nhead,
+            use_linear=False,
+        )
 
         # Feed-forward
         self.norm3 = _get_norm(d_model)
@@ -284,7 +264,6 @@ class SimplifiedTransformerBlock(nn.Module):
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
         self.droppath = DropPath(droppath, batch_dim=1)
-        self.stopgrad = stopgrad
         self.joint_longatt = joint_longatt
         self.linear_q = linear_q
         self._init_weight()
@@ -358,22 +337,11 @@ class SimplifiedTransformerBlock(nn.Module):
                 torch.cat((local_V, curr_V), 0),
             )[0]
         else:
-            if self.stopgrad:
-                K = local_K + curr_K
-                # K = self.norm4(K)
-                V = local_V + curr_V
-                # V = self.norm4(V)
-                tgt3 = self.short_term_attn(
-                    seq_to_2d(local_Q, size_2d),
-                    seq_to_2d(K, size_2d),
-                    seq_to_2d(V, size_2d),
-                )[0]
-            else:
-                tgt3 = self.short_term_attn(
-                    local_Q,
-                    self.norm4(local_K + curr_K),
-                    self.norm4(local_V + curr_V),
-                )[0]
+            tgt3 = self.short_term_attn(
+                local_Q,
+                self.norm4(local_K + curr_K),
+                self.norm4(local_V + curr_V),
+            )[0]
 
         _tgt3 = tgt3
 

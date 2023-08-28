@@ -39,7 +39,6 @@ class AOT(nn.Module):
             droppath_scaling=cfg.TRAIN_LSTT_DROPPATH_SCALING,
             intermediate_norm=cfg.MODEL_DECODER_INTERMEDIATE_LSTT,
             return_intermediate=True,
-            stopgrad=cfg.MODEL_STM_STOPGRAD,
             joint_longatt=cfg.MODEL_JOINT_LONGATT,
             linear_q=cfg.MODEL_LINEAR_Q,
             norm_inp=cfg.MODEL_NORM_INP,
