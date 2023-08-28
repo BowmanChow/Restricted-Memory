@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable, List
 import torch.nn.functional as F
 from torch import nn
 import torch
@@ -61,7 +61,7 @@ class LongShortTermTransformer(nn.Module):
 
         self.emb_dropout = nn.Dropout(emb_dropout, True)
 
-        layers = []
+        layers: List[SimplifiedTransformerBlock] = []
         for idx in range(num_layers):
             if droppath_scaling:
                 if num_layers == 1:
@@ -80,7 +80,7 @@ class LongShortTermTransformer(nn.Module):
                     linear_q=linear_q,
                     recurrent_stm=recurrent_stm,
                 ))
-        self.layers = nn.ModuleList(layers)
+        self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(layers)
 
         num_norms = num_layers - 1 if intermediate_norm else 0
         if final_norm:
