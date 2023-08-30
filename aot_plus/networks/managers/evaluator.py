@@ -209,6 +209,7 @@ class Evaluator(object):
                 is_oracle=True if hasattr(
                     cfg, "ORACLE") and cfg.ORACLE else False,
             )
+            print(f"{self.dataset.seqs = }")
         elif cfg.TEST_DATASET == 'test':
             self.result_root = os.path.join(
                 cfg.DIR_EVALUATION,
