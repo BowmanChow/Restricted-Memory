@@ -231,8 +231,10 @@ class Evaluator(object):
             cfg.DIR_EVALUATION, cfg.TEST_DATASET,
             f'{eval_name}.zip',
         )
+        print(f"{self.result_root = }")
         if not os.path.exists(self.result_root):
             try:
+                print(f"making dir {self.result_root = }")
                 os.makedirs(self.result_root)
             except Exception as inst:
                 self.print_log(inst)
