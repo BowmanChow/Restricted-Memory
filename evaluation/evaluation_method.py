@@ -48,7 +48,7 @@ else:
     g_res = np.reshape(g_res, [1, len(g_res)])
     table_g = pd.DataFrame(data=g_res, columns=g_measures)
     with open(csv_name_global_path, 'w') as f:
-        table_g.to_csv(f, index=False, float_format="%.3f")
+        table_g.to_csv(f, index=False, float_format="%.6f")
     print(f'Global results saved in {csv_name_global_path}')
 
     # Generate a dataframe for the per sequence results
@@ -58,7 +58,7 @@ else:
     J_last_per_object = [J_last['M_per_object'][x] for x in seq_names]
     table_seq = pd.DataFrame(data=list(zip(seq_names, J_per_object, J_last_per_object)), columns=seq_measures)
     with open(csv_name_per_sequence_path, 'w') as f:
-        table_seq.to_csv(f, index=False, float_format="%.3f")
+        table_seq.to_csv(f, index=False, float_format="%.6f")
     print(f'Per-sequence results saved in {csv_name_per_sequence_path}')
 
 # Print the results
