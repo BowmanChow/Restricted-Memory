@@ -52,7 +52,7 @@ class Evaluation(object):
         # Sweep all sequences
         results = Results(root_dir=res_path)
         for seq in tqdm(list(self.dataset.get_sequences())):
-            print(seq)
+            print(f"\n{seq}")
             all_gt_masks, all_void_masks, all_masks_id = self.dataset.get_all_masks(seq, True)
             all_gt_masks, all_masks_id = all_gt_masks[:, 1:-1, :, :], all_masks_id[1:-1]
             num_eval_frames = len(all_masks_id)
