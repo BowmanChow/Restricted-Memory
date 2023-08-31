@@ -276,13 +276,23 @@ class AOTEngine(nn.Module):
                 self.batch_size, -1, -1, -1,
             ).view(self.batch_size, -1, self.enc_hw).permute(2, 0, 1)
         if "time_encode" in self.cfg.EXP_NAME:
-            self.temporal_encoding = get_temporal_positional_encoding(
-                max_sequence_len=500,
-                channels=curr_enc_embs[-1].size()[1],
-                device=curr_enc_embs[-1].device,
-                is_normalize=True,
-                # is_debug=True,
-            )
+            if "time_encode_2" in self.cfg.EXP_NAME:
+                self.temporal_encoding = get_temporal_positional_encoding(
+                    max_sequence_len=2,
+                    channels=curr_enc_embs[-1].size()[1],
+                    device=curr_enc_embs[-1].device,
+                    is_normalize=True,
+                    scale=1.57,
+                    # is_debug=True,
+                )
+            else:
+                self.temporal_encoding = get_temporal_positional_encoding(
+                    max_sequence_len=500,
+                    channels=curr_enc_embs[-1].size()[1],
+                    device=curr_enc_embs[-1].device,
+                    is_normalize=True,
+                    # is_debug=True,
+                )
         else:
             self.temporal_encoding = None
 
@@ -340,12 +350,24 @@ class AOTEngine(nn.Module):
         else:
             curr_enc_embs = img_embs
 
+        if "time_encode_2" in self.cfg.EXP_NAME:
+            self.temporal_encoding = get_temporal_positional_encoding(
+                max_sequence_len=self.AOT.LSTT.long_term_memories[0][0].size(0)+1,
+                channels=curr_enc_embs[-1].size()[1],
+                device=curr_enc_embs[-1].device,
+                is_normalize=True,
+                scale=1.57,
+                # is_debug=True,
+            )
         curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
             None,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
             temporal_encoding=self.temporal_encoding[
+                :-1, ...]
+            if "time_encode_2" in self.cfg.EXP_NAME else
+            self.temporal_encoding[
                 0:self.frame_step:self.long_term_mem_gap, ...]
             if self.temporal_encoding is not None else None,
         )
