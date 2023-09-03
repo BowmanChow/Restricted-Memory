@@ -88,12 +88,14 @@ class AOTEngine(nn.Module):
         curr_losses.append(curr_loss)
         curr_masks.append(curr_mask)
         for _ in range(self.total_offline_frame_num - 2):
-            self.update_short_term_memory(
+            curr_loss = self.update_short_term_memory(
                 curr_mask if not use_prev_prob else curr_prob,
                 None if use_prev_pred else self.assign_identity(
                     self.offline_one_hot_masks[self.frame_step],
                     self.offline_ignore_masks[self.frame_step],
                 ))
+            if curr_loss is not None:
+                curr_losses.append(0.5 * curr_loss)
             self.match_propogate_one_frame(mask=curr_prob)
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
@@ -258,6 +260,16 @@ class AOTEngine(nn.Module):
                 None, mask, frame_step)
             curr_enc_embs = img_embs
 
+        self.ref_enc_embs = curr_enc_embs
+        if mask is not None:
+            self.ref_mask = mask
+        else:
+            self.ref_mask = self.offline_masks[0]
+        self.ref_mask_downsample = F.interpolate(
+            self.ref_mask.float(), self.ref_enc_embs[0].shape[-2:], mode='nearest')
+        self.ref_one_hot_mask_downsample, _ = one_hot_mask(
+            self.ref_mask_downsample, self.max_obj_num)
+
         if curr_enc_embs is None:
             print('No image for reference frame!')
             exit()
@@ -325,6 +337,33 @@ class AOTEngine(nn.Module):
             short_term_mem_skip=self.short_term_mem_skip,
             is_update_long_memory=is_update_long_memory,
         )
+        if self.cfg.REVERSE_INFER:
+            if self.frame_step == 1:
+                self.first_short_memories = [
+                    [mem_k_v[0].detach().clone(), mem_k_v[1].detach().clone()] for mem_k_v in self.AOT.LSTT.short_term_memories]
+            if is_update_long_memory:
+                long_memory_remove_1st = [
+                    [mem_k_v[0][1:, ...], mem_k_v[1][1:, ...]] for mem_k_v in self.AOT.LSTT.long_term_memories
+                ]
+                # self.AOT.LSTT_forward
+                curr_embs = self.ref_enc_embs
+                n, c, h, w = curr_embs[-1].size()
+                curr_emb = curr_embs[-1].view(n, c, h * w).permute(2, 0, 1)
+                # LSTT
+                curr_lstt_output = self.AOT.LSTT(
+                    curr_emb,
+                    curr_id_emb=None,
+                    self_pos=self.pos_emb,
+                    size_2d=self.enc_size_2d,
+                    is_outer_memory=True,
+                    outer_long_memories=long_memory_remove_1st,
+                    outer_short_memories=self.first_short_memories,
+                )
+                self.decode_current_logits(curr_embs, curr_lstt_output)
+                curr_loss, _ = self.generate_loss_mask(
+                    self.ref_mask, 100000, return_prob=False)
+
+                return curr_loss
 
     def match_propogate_one_frame(self, img=None, img_embs=None, mask=None, output_size=None):
         self.frame_step += 1
