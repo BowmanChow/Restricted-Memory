@@ -1,21 +1,23 @@
 import sys
-if sys.argv[-1] == "--fix_random":
-    print(f"Fix random seed")
+if "--fix_random" in sys.argv:
+    random_seed = 10
+    print(f"Fix random seed {random_seed}")
     import os
     os.environ['CUDNN_DETERMINISTIC'] = '1'
-    os.environ['PYTHONHASHSEED'] = str(10)
-    os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
+    os.environ['PYTHONHASHSEED'] = str(random_seed)
+    # os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
     import random
-    random.seed(10)
+    random.seed(random_seed)
     import numpy as np
-    np.random.seed(10)
+    np.random.seed(random_seed)
     import torch
-    torch.manual_seed(10)
-    torch.cuda.manual_seed(10)
-    torch.cuda.manual_seed_all(10)
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed)
     torch.backends.cudnn.deterministic=True
     torch.backends.cudnn.benchmark = False
     # torch.use_deterministic_algorithms(True)
+    sys.argv.remove("--fix_random")
 
 import importlib
 import sys
@@ -77,8 +79,8 @@ def main():
     parser.add_argument('--log', type=str, default='./eval_logs')
     parser.add_argument('--eval_name', type=str, default='debug')
 
-    parser.add_argument('--fix_random', action='store_true')
-    parser.set_defaults(fix_random=False)
+    parser.add_argument('--debug_fix_random', action='store_true')
+    parser.set_defaults(debug_fix_random=False)
 
     args = parser.parse_args()
 
@@ -113,7 +115,7 @@ def main():
     cfg.TEST_MAX_SIZE = args.max_resolution * 800. / 480.
 
     setattr(cfg, "EVAL_NAME", args.eval_name)
-    setattr(cfg, "DEBUG_FIX_RANDOM", args.fix_random)
+    setattr(cfg, "DEBUG_FIX_RANDOM", args.debug_fix_random)
 
     if args.gpu_num > 1:
         mp.set_start_method('spawn')

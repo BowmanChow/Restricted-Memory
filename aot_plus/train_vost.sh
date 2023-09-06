@@ -20,8 +20,9 @@ CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
 	--model ${model} \
 	--gpu_num ${gpu_num} \
 	--batch_size 2 \
+	--fix_random \
 	# --log ./debug_logs \
-	# --fix_random
+	# --debug_fix_random
 
 
 dataset="vost"
@@ -30,7 +31,9 @@ eval_name="debug"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
 	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0 \
 	--eval_name ${eval_name} \
-	# --fix_random
+	--fix_random \
+	# --debug_fix_random
+
 result_path="${result_path}/eval/${dataset}/${eval_name}/"
 echo "result_path=$result_path"
 
