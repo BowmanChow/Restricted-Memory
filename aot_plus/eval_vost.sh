@@ -1,6 +1,6 @@
 exp="aotplus"
 # exp="debug"
-gpu_num="1"
+gpu_num="3"
 devices="0,1,2,3,4,5,6,7"
 
 # model="aott"
@@ -21,10 +21,12 @@ dataset="vost"
 split="val"
 eval_name="debug"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
-	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0 1.1 \
+	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0 1.1 \
 	--ckpt_path pretrain_models/R50_AOTL_PRE_YTB_DAV.pth \
 	--eval_name ${eval_name} \
-	--fix_random
+	--fix_random \
+	--debug_fix_random
+
 result_path="${result_path}/eval/${dataset}/${eval_name}/"
 echo "result_path=$result_path"
 
