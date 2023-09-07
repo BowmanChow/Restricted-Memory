@@ -85,9 +85,8 @@ def main():
 
     args = parser.parse_args()
 
-    spec = importlib.util.spec_from_file_location("config", f"{args.result_path}/config.py")
-    config = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(config)
+    sys.path.append(f"{args.result_path}/")
+    import config
     cfg = config.Config()
 
     log_dir = make_log_dir(args.log, cfg.EXP_NAME)
