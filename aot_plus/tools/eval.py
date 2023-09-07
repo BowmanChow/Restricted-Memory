@@ -1,23 +1,4 @@
 import sys
-if "--fix_random" in sys.argv:
-    random_seed = 10
-    print(f"Fix random seed {random_seed}")
-    import os
-    os.environ['CUDNN_DETERMINISTIC'] = '1'
-    os.environ['PYTHONHASHSEED'] = str(random_seed)
-    # os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
-    import random
-    random.seed(random_seed)
-    import numpy as np
-    np.random.seed(random_seed)
-    import torch
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)
-    torch.backends.cudnn.deterministic=True
-    torch.backends.cudnn.benchmark = False
-    # torch.use_deterministic_algorithms(True)
-    sys.argv.remove("--fix_random")
 
 import importlib
 import sys
@@ -35,6 +16,24 @@ from networks.managers.evaluator import Evaluator
 
 
 def main_worker(gpu, cfg, seq_queue=None, info_queue=None, enable_amp=False):
+    if cfg.FIX_RANDOM:
+        random_seed = 1
+        print(f"[{gpu}] : Fix random seed {random_seed}")
+        import os
+        os.environ['CUDNN_DETERMINISTIC'] = '1'
+        os.environ['PYTHONHASHSEED'] = str(random_seed)
+        # os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
+        import random
+        random.seed(random_seed+1)
+        import numpy as np
+        np.random.seed(random_seed+2)
+        import torch
+        torch.manual_seed(random_seed+3)
+        torch.cuda.manual_seed(random_seed+4)
+        torch.cuda.manual_seed_all(random_seed+5)
+        torch.backends.cudnn.deterministic=True
+        torch.backends.cudnn.benchmark = False
+        # torch.use_deterministic_algorithms(True)
     # Initiate a evaluating manager
     evaluator = Evaluator(rank=gpu,
                           cfg=cfg,
@@ -81,6 +80,8 @@ def main():
 
     parser.add_argument('--debug_fix_random', action='store_true')
     parser.set_defaults(debug_fix_random=False)
+    parser.add_argument('--fix_random', action='store_true')
+    parser.set_defaults(fix_random=False)
 
     args = parser.parse_args()
 
@@ -116,6 +117,7 @@ def main():
 
     setattr(cfg, "EVAL_NAME", args.eval_name)
     setattr(cfg, "DEBUG_FIX_RANDOM", args.debug_fix_random)
+    setattr(cfg, "FIX_RANDOM", args.fix_random)
 
     if args.gpu_num > 1:
         mp.set_start_method('spawn')

@@ -280,7 +280,7 @@ class Evaluator(object):
 
                 seq_name = seq_dataset.seq_name
                 print(
-                    f'GPU {self.gpu} - Processing Seq {seq_name} [{video_num}/{total_video_num}]:')
+                    f'\nGPU {self.gpu} - Processing Seq {seq_name} [{video_num}/{total_video_num}]:')
                 gc.collect()
                 torch.cuda.empty_cache()
 
@@ -401,7 +401,7 @@ class Evaluator(object):
                                 pred_logit = engine.match_propogate_one_frame(
                                     current_img, output_size=(ori_height, ori_width))
                             if cfg.DEBUG_FIX_RANDOM:
-                                print(f"\n{pred_logit[0, :7, 100, 100] = }")
+                                print(f"\n [{self.rank}] : {frame_idx = } {pred_logit[0, :7, 100, 100] = }")
 
                             if is_flipped:
                                 pred_logit = flip_tensor(pred_logit, 3)
