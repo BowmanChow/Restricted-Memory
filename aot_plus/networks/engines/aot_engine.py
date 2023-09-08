@@ -95,7 +95,7 @@ class AOTEngine(nn.Module):
                     self.offline_ignore_masks[self.frame_step],
                 ))
             if curr_loss is not None:
-                curr_losses.append(0.5 * curr_loss)
+                curr_losses.append(curr_loss)
             self.match_propogate_one_frame(mask=curr_prob)
             curr_loss, curr_mask, curr_prob = self.generate_loss_mask(
                 self.offline_masks[self.frame_step], step, return_prob=True)
@@ -359,10 +359,11 @@ class AOTEngine(nn.Module):
                     outer_long_memories=long_memory_remove_1st,
                     outer_short_memories=self.first_short_memories,
                 )
+                pred_id_logits = self.decode_current_logits(curr_embs, curr_lstt_output)
                 if self.training:
-                    self.decode_current_logits(curr_embs, curr_lstt_output)
                     curr_loss, _ = self.generate_loss_mask(
                         self.ref_mask, 100000, return_prob=False)
+                    curr_loss = self.cfg.REVERSE_LOSS * curr_loss
                 else:
                     curr_loss = None
 
