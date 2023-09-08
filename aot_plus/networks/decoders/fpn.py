@@ -38,22 +38,30 @@ class FPNSegmentationHead(nn.Module):
         else:
             x = inputs[-1]
 
+        # x.shape = [2, 1024, 30, 30]
         x = F.relu_(self.conv_in(x))
+        # x.shape = [2, 256, 30, 30]
         x = F.relu_(self.conv_16x(self.adapter_16x(shortcuts[-2]) + x))
+        # x.shape = [2, 256, 30, 30]
 
         x = F.interpolate(x,
                           size=shortcuts[-3].size()[-2:],
                           mode="bilinear",
                           align_corners=self.align_corners)
+        # x.shape = [2, 256, 59, 59]
         x = F.relu_(self.conv_8x(self.adapter_8x(shortcuts[-3]) + x))
+        # x.shape = [2, 128, 59, 59]
 
         x = F.interpolate(x,
                           size=shortcuts[-4].size()[-2:],
                           mode="bilinear",
                           align_corners=self.align_corners)
+        # x.shape = [2, 128, 117, 117]
         x = F.relu_(self.conv_4x(self.adapter_4x(shortcuts[-4]) + x))
+        # x.shape = [2, 128, 117, 117]
 
         x = self.conv_out(x)
+        # x.shape = [2, 11, 117, 117]
 
         return x
 
