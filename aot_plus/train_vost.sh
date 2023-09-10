@@ -29,7 +29,7 @@ dataset="vost"
 split="val"
 eval_name="debug"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path ${result_path} \
-	--dataset ${dataset} --split ${split} --gpu_num 1 --ms 1.0 \
+	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0 \
 	--eval_name ${eval_name} \
 	--fix_random \
 	# --debug_fix_random
