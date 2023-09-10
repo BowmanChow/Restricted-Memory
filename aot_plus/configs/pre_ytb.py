@@ -13,7 +13,6 @@ class EngineConfig(DefaultEngineConfig):
         pretrain_ckpt = 'save_step_100000.pth'
         self.DATA_SEQ_LEN = 10
         self.TRAIN_LONG_TERM_MEM_GAP = 4
-        self.MODEL_JOINT_LONGATT = False
         self.TRAIN_TOTAL_STEPS = 80000
         self.MODEL_LINEAR_Q = True
         self.PRETRAIN_FULL = True  # if False, load encoder only

@@ -46,7 +46,6 @@ class LongShortTermTransformer(nn.Module):
         return_intermediate=False,
         intermediate_norm=True,
         final_norm=True,
-        joint_longatt=False,
         linear_q=False,
         norm_inp=False,
     ):
@@ -73,7 +72,6 @@ class LongShortTermTransformer(nn.Module):
                     d_model, self_nhead, att_nhead,
                     dim_feedforward, droppath_rate,
                     activation,
-                    joint_longatt=joint_longatt,
                     linear_q=linear_q,
                 ))
         self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(layers)
@@ -225,7 +223,6 @@ class SimplifiedTransformerBlock(nn.Module):
         dim_feedforward=1024,
         droppath=0.1,
         activation="gelu",
-        joint_longatt=False,
         linear_q=False,
     ):
         super().__init__()
@@ -264,7 +261,6 @@ class SimplifiedTransformerBlock(nn.Module):
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
         self.droppath = DropPath(droppath, batch_dim=1)
-        self.joint_longatt = joint_longatt
         self.linear_q = linear_q
         self._init_weight()
 
@@ -321,14 +317,7 @@ class SimplifiedTransformerBlock(nn.Module):
             flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
             flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
 
-        if self.joint_longatt:
-            tgt2 = self.long_term_attn(
-                curr_Q,
-                torch.cat((flatten_global_K, curr_K), 0),
-                torch.cat((flatten_global_V, curr_V), 0),
-            )[0]
-        else:
-            tgt2 = self.long_term_attn(curr_Q, flatten_global_K, flatten_global_V)[0]
+        tgt2 = self.long_term_attn(curr_Q, flatten_global_K, flatten_global_V)[0]
 
         if self.linear_q:
             tgt3 = self.short_term_attn(

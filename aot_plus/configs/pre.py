@@ -19,4 +19,3 @@ class EngineConfig(DefaultEngineConfig):
         self.TRAIN_AUX_LOSS_RATIO = 0.1
 
         self.MODEL_LINEAR_Q = True
-        self.MODEL_JOINT_LONGATT = True
