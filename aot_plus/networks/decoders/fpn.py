@@ -5,13 +5,15 @@ from networks.layers.basic import ConvGN
 
 
 class FPNSegmentationHead(nn.Module):
-    def __init__(self,
-                 in_dim,
-                 out_dim,
-                 decode_intermediate_input=True,
-                 hidden_dim=256,
-                 shortcut_dims=[24, 32, 96, 1280],
-                 align_corners=True):
+    def __init__(
+        self,
+        in_dim,
+        out_dim,
+        decode_intermediate_input=True,
+        hidden_dim=256,
+        shortcut_dims=[24, 32, 96, 1280],
+        align_corners=True,
+    ):
         super().__init__()
         self.align_corners = align_corners
 
