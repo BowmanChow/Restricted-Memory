@@ -44,7 +44,6 @@ class AOTEngine(nn.Module):
         step=0,
         tf_board=False,
         use_prev_pred=False,
-        use_prev_prob=False,
     ):  # only used for training
         if self.losses is None:
             self._init_losses()
@@ -89,7 +88,7 @@ class AOTEngine(nn.Module):
         curr_masks.append(curr_mask)
         for _ in range(self.total_offline_frame_num - 2):
             curr_loss = self.update_short_term_memory(
-                curr_mask if not use_prev_prob else curr_prob,
+                curr_mask,
                 None if use_prev_pred else self.assign_identity(
                     self.offline_one_hot_masks[self.frame_step],
                     self.offline_ignore_masks[self.frame_step],

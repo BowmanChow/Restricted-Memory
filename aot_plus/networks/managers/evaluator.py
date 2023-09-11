@@ -445,35 +445,20 @@ class Evaluator(object):
                                     frame_step=frame_idx,
                                 )
                         else:
-                            if not cfg.MODEL_USE_PREV_PROB:
-                                if cfg.TEST_FLIP:
-                                    flip_pred_label = flip_tensor(
-                                        pred_label, 3)
+                            if cfg.TEST_FLIP:
+                                flip_pred_label = flip_tensor(
+                                    pred_label, 3)
 
-                                for aug_idx in range(len(samples)):
-                                    engine = all_engines[aug_idx]
-                                    current_label = flip_pred_label if samples[
-                                        aug_idx]['meta']['flip'] else pred_label
-                                    current_label = F.interpolate(
-                                        current_label,
-                                        size=engine.input_size_2d,
-                                        mode="nearest",
-                                    )
-                                    engine.update_memory(current_label)
-                            else:
-                                if cfg.TEST_FLIP:
-                                    flip_pred_prob = flip_tensor(pred_prob, 3)
-
-                                for aug_idx in range(len(samples)):
-                                    engine = all_engines[aug_idx]
-                                    current_prob = flip_pred_prob if samples[
-                                        aug_idx]['meta']['flip'] else pred_prob
-                                    current_prob = F.interpolate(
-                                        current_prob,
-                                        size=engine.input_size_2d,
-                                        mode="nearest",
-                                    )
-                                    engine.update_memory(current_prob)
+                            for aug_idx in range(len(samples)):
+                                engine = all_engines[aug_idx]
+                                current_label = flip_pred_label if samples[
+                                    aug_idx]['meta']['flip'] else pred_label
+                                current_label = F.interpolate(
+                                    current_label,
+                                    size=engine.input_size_2d,
+                                    mode="nearest",
+                                )
+                                engine.update_memory(current_label)
 
                         now_timer = torch.cuda.Event(enable_timing=True)
                         now_timer.record()

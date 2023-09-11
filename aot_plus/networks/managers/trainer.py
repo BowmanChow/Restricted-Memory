@@ -532,7 +532,6 @@ class Trainer(object):
         max_itr = cfg.TRAIN_TOTAL_STEPS
         start_seq_training_step = int(
             cfg.TRAIN_SEQ_TRAINING_START_RATIO * max_itr)
-        use_prev_prob = cfg.MODEL_USE_PREV_PROB
 
         self.print_log('Start training:')
         model.train()
@@ -627,7 +626,6 @@ class Trainer(object):
                             obj_nums=obj_nums,
                             step=step,
                             tf_board=tf_board,
-                            use_prev_prob=use_prev_prob,
                         )
                         if cfg.DEBUG_FIX_RANDOM:
                             print(f"[{self.rank}] : Loss {loss} | ")
@@ -650,7 +648,6 @@ class Trainer(object):
                         obj_nums=obj_nums,
                         step=step,
                         tf_board=tf_board,
-                        use_prev_prob=use_prev_prob,
                     )
                     if cfg.DEBUG_FIX_RANDOM:
                         print(f"Loss {loss} | ")
