@@ -133,6 +133,9 @@ class AOT(nn.Module):
         pos_emb=None,
         size_2d=(30, 30),
         temporal_encoding=None,
+        is_outer_memory=False,
+        outer_long_memories=None,
+        outer_short_memories=None,
     ):
         curr_emb = bchw_2_lbc(curr_embs[-1])
         lstt_embs = self.LSTT(
@@ -141,6 +144,9 @@ class AOT(nn.Module):
             pos_emb,
             size_2d,
             temporal_encoding=temporal_encoding,
+            is_outer_memory=is_outer_memory,
+            outer_long_memories=outer_long_memories,
+            outer_short_memories=outer_short_memories,
         )
         return lstt_embs
 
