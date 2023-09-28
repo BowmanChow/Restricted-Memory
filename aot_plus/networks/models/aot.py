@@ -5,6 +5,7 @@ from networks.encoders import build_encoder
 from networks.layers.transformer import LongShortTermTransformer
 from networks.decoders import build_decoder
 from networks.layers.position import PositionEmbeddingSine
+from utils.tensor import bchw_2_lbc
 
 
 class AOT(nn.Module):
@@ -133,8 +134,7 @@ class AOT(nn.Module):
         size_2d=(30, 30),
         temporal_encoding=None,
     ):
-        n, c, h, w = curr_embs[-1].size()
-        curr_emb = curr_embs[-1].view(n, c, h * w).permute(2, 0, 1)
+        curr_emb = bchw_2_lbc(curr_embs[-1])
         lstt_embs = self.LSTT(
             curr_emb,
             curr_id_emb,
