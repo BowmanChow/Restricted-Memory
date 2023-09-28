@@ -346,21 +346,16 @@ class AOTEngine(nn.Module):
                 long_memory_remove_1st = [
                     [mem_k_v[0][1:, ...], mem_k_v[1][1:, ...]] for mem_k_v in self.AOT.LSTT.long_term_memories
                 ]
-                # self.AOT.LSTT_forward
-                curr_embs = self.ref_enc_embs
-                n, c, h, w = curr_embs[-1].size()
-                curr_emb = curr_embs[-1].view(n, c, h * w).permute(2, 0, 1)
-                # LSTT
-                curr_lstt_output = self.AOT.LSTT(
-                    curr_emb,
+                curr_lstt_output = self.AOT.LSTT_forward(
+                    curr_embs=self.ref_enc_embs,
                     curr_id_emb=None,
-                    self_pos=self.pos_emb,
+                    pos_emb=self.pos_emb,
                     size_2d=self.enc_size_2d,
                     is_outer_memory=True,
                     outer_long_memories=long_memory_remove_1st,
                     outer_short_memories=self.first_short_memories,
                 )
-                pred_id_logits = self.decode_current_logits(curr_embs, curr_lstt_output)
+                pred_id_logits = self.decode_current_logits(self.ref_enc_embs, curr_lstt_output)
                 if self.training:
                     curr_loss, _ = self.generate_loss_mask(
                         self.ref_mask, step, return_prob=False)
