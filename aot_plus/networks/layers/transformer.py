@@ -4,7 +4,7 @@ from torch import nn
 import torch
 
 from networks.layers.basic import DropPath, GroupNorm1D, GNActDWConv2d, seq_to_2d
-from networks.layers.attention import MultiheadAttention, MultiheadLocalAttentionV2, MultiheadLocalAttentionV3
+from networks.layers.attention import MultiheadAttention
 
 
 def _get_norm(indim, type='ln', groups=8):
