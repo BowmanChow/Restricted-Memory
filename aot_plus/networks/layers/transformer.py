@@ -74,7 +74,8 @@ class LongShortTermTransformer(nn.Module):
                     activation,
                     linear_q=linear_q,
                 ))
-        self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(layers)
+        self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(
+            layers)
 
         num_norms = num_layers - 1 if intermediate_norm else 0
         if final_norm:
@@ -317,7 +318,8 @@ class SimplifiedTransformerBlock(nn.Module):
             flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
             flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
 
-        tgt2 = self.long_term_attn(curr_Q, flatten_global_K, flatten_global_V)[0]
+        tgt2 = self.long_term_attn(
+            curr_Q, flatten_global_K, flatten_global_V)[0]
 
         if self.linear_q:
             tgt3 = self.short_term_attn(
