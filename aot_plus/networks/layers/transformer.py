@@ -5,6 +5,7 @@ import torch
 
 from networks.layers.basic import DropPath, GroupNorm1D, GNActDWConv2d, seq_to_2d
 from networks.layers.attention import MultiheadAttention
+from utils.tensor import lbc_2_bchw, bchw_2_lbc
 
 
 def _get_norm(indim, type='ln', groups=8):
