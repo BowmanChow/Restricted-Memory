@@ -99,6 +99,7 @@ class LongShortTermTransformer(nn.Module):
         is_outer_memory=False,
         outer_long_memories=None,
         outer_short_memories=None,
+        save_atten_weights=False,
     ):
 
         output = self.emb_dropout(tgt)
@@ -116,6 +117,7 @@ class LongShortTermTransformer(nn.Module):
                     self_pos=self_pos,
                     size_2d=size_2d,
                     temporal_encoding=temporal_encoding,
+                    save_atten_weights=save_atten_weights,
                 )
             else:
                 output, memories = layer(
@@ -128,6 +130,7 @@ class LongShortTermTransformer(nn.Module):
                     self_pos=self_pos,
                     size_2d=size_2d,
                     temporal_encoding=temporal_encoding,
+                    save_atten_weights=save_atten_weights,
                 )
             # memories : [[curr_K, curr_V], [global_K, global_V], [local_K, local_V]]
 
@@ -281,6 +284,7 @@ class SimplifiedTransformerBlock(nn.Module):
         self_pos=None,
         size_2d=(30, 30),
         temporal_encoding=None,
+        save_atten_weights=False,
     ):
 
         # Self-attention
@@ -318,8 +322,14 @@ class SimplifiedTransformerBlock(nn.Module):
             flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
             flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
 
-        tgt2 = self.long_term_attn(
-            curr_Q, flatten_global_K, flatten_global_V)[0]
+        tgt2, attn = self.long_term_attn(
+            curr_Q, flatten_global_K, flatten_global_V,
+            is_return_attn_weight=save_atten_weights,
+        )
+        if save_atten_weights:
+            self.record_T = attn.size(-1) // attn.size(-2)
+            self.attn_values, self.attn_indices = attn.detach().mean(dim=1).topk(32, dim=-1)
+            self.attn_values, self.attn_indices = self.attn_values.cpu().squeeze(), self.attn_indices.cpu().squeeze()
 
         if self.linear_q:
             tgt3 = self.short_term_attn(
@@ -328,11 +338,15 @@ class SimplifiedTransformerBlock(nn.Module):
                 torch.cat((local_V, curr_V), 0),
             )[0]
         else:
-            tgt3 = self.short_term_attn(
+            tgt3, short_attn = self.short_term_attn(
                 local_Q,
                 self.norm4(local_K + curr_K),
                 self.norm4(local_V + curr_V),
-            )[0]
+                is_return_attn_weight=save_atten_weights,
+            )
+        if save_atten_weights:
+            self.short_attn_values, self.short_attn_indices = short_attn.detach().mean(dim=1).topk(32, dim=-1)
+            self.short_attn_values, self.short_attn_indices = self.short_attn_values.cpu().squeeze(), self.short_attn_indices.cpu().squeeze()
 
         _tgt3 = tgt3
 

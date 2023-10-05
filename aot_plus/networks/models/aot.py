@@ -136,6 +136,7 @@ class AOT(nn.Module):
         is_outer_memory=False,
         outer_long_memories=None,
         outer_short_memories=None,
+        save_atten_weights=False,
     ):
         curr_emb = bchw_2_lbc(curr_embs[-1])
         lstt_embs = self.LSTT(
@@ -147,6 +148,7 @@ class AOT(nn.Module):
             is_outer_memory=is_outer_memory,
             outer_long_memories=outer_long_memories,
             outer_short_memories=outer_short_memories,
+            save_atten_weights=save_atten_weights,
         )
         return lstt_embs
 
