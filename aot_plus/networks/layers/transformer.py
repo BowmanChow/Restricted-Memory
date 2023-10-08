@@ -165,6 +165,8 @@ class LongShortTermTransformer(nn.Module):
             curr_id_emb,
             short_term_mem_skip,
             is_update_long_memory,
+            former_mem_len=1,
+            latter_mem_len=7,
         ):
         lstt_curr_memories_2d = []
         for layer_idx in range(len(self.lstt_curr_memories)):
@@ -192,11 +194,17 @@ class LongShortTermTransformer(nn.Module):
         self.short_term_memories = self.short_term_memories_list[0]
 
         if is_update_long_memory:
-            self.update_long_term_memory(self.lstt_curr_memories)
+            self.update_long_term_memory(
+                self.lstt_curr_memories,
+                former_mem_len=former_mem_len,
+                latter_mem_len=latter_mem_len,
+            )
 
     def update_long_term_memory(
             self,
             new_long_term_memories,
+            former_mem_len=1,
+            latter_mem_len=7,
         ):
         updated_long_term_memories = []
         max_size = 48840
@@ -207,7 +215,10 @@ class LongShortTermTransformer(nn.Module):
                 new_long_term_memory,
                 last_long_term_memory,
             ):
-                new_mem = torch.cat([last_e, new_e[None, ...]], dim=0)
+                if last_e.size(0) > (former_mem_len+latter_mem_len-1):
+                    new_mem = torch.cat([last_e[0:former_mem_len, ...], last_e[-(latter_mem_len-1):, ...], new_e[None, ...]], dim=0)
+                else:
+                    new_mem = torch.cat([last_e, new_e[None, ...]], dim=0)
                 updated_e.append(new_mem)
             updated_long_term_memories.append(updated_e)
         self.long_term_memories = updated_long_term_memories

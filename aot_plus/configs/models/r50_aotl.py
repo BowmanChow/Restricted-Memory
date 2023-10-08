@@ -4,6 +4,8 @@ from .default import DefaultModelConfig
 class ModelConfig(DefaultModelConfig):
     def __init__(self):
         super().__init__()
+        self.FORMER_MEM_LEN = 1
+        self.LATTER_MEM_LEN = 7
         self.USE_MASK = False
         self.NO_LONG_MEMORY = False
         long_mem_text = "_No_long_mem" if self.NO_LONG_MEMORY else ""

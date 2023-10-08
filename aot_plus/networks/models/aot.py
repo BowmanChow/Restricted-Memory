@@ -184,4 +184,6 @@ class AOT(nn.Module):
             curr_id_emb=curr_id_emb,
             short_term_mem_skip=short_term_mem_skip,
             is_update_long_memory=is_update_long_memory,
+            former_mem_len=self.cfg.FORMER_MEM_LEN,
+            latter_mem_len=self.cfg.LATTER_MEM_LEN,
         )
