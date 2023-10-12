@@ -341,6 +341,7 @@ class AOTEngine(nn.Module):
         is_update_long_memory = False
         if (not (hasattr(self.cfg, "NO_LONG_MEMORY") and self.cfg.NO_LONG_MEMORY)) \
                 and self.frame_step - self.last_mem_step >= self.long_term_mem_gap:
+            # print(f"update long memory {self.frame_step = }")
             is_update_long_memory = True
             self.last_mem_step = self.frame_step
         self.AOT.update_short_term_memory(
