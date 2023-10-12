@@ -348,6 +348,11 @@ class AOTEngine(nn.Module):
             short_term_mem_skip=self.short_term_mem_skip,
             is_update_long_memory=is_update_long_memory,
         )
+        if is_update_long_memory:
+            self.AOT.LSTT.restrict_long_memories(
+                former_memory_len=self.cfg.FORMER_MEM_LEN,
+                latter_memory_len=self.cfg.LATTER_MEM_LEN,
+            )
         if self.cfg.REVERSE_INFER:
             if self.frame_step == 1:
                 self.first_short_memories = [

@@ -214,6 +214,19 @@ class LongShortTermTransformer(nn.Module):
             updated_long_term_memories.append(updated_e)
         self.long_term_memories = updated_long_term_memories
 
+    def restrict_long_memories(
+            self,
+            former_memory_len,
+            latter_memory_len,
+        ):
+        for layer_idx in range(len(self.layers)):
+            memory_k_v = self.long_term_memories[layer_idx]
+            for i in range(len(memory_k_v)):
+                mem = memory_k_v[i]
+                if mem.size(0) > (former_memory_len + latter_memory_len):
+                    new_mem = torch.cat([mem[0:former_memory_len, ...], mem[-latter_memory_len:, ...]], dim=0)
+                    self.long_term_memories[layer_idx][i] = new_mem
+
     def init_memory(self):
         self.long_term_memories = self.lstt_long_memories
         self.short_term_memories_list = [self.lstt_short_memories]
