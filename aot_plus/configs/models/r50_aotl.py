@@ -8,7 +8,7 @@ class ModelConfig(DefaultModelConfig):
         self.NO_LONG_MEMORY = False
         long_mem_text = "_No_long_mem" if self.NO_LONG_MEMORY else ""
         self.NO_MEMORY_GAP = False
-        self.MODEL_ATT_HEADS = 1 if self.NO_MEMORY_GAP else self.MODEL_ATT_HEADS
+        self.MODEL_ATT_HEADS = 2 if self.NO_MEMORY_GAP else self.MODEL_ATT_HEADS
         mem_gap_text = "_No_mem_gap" if self.NO_MEMORY_GAP else ""
         self.REVERSE_INFER = True
         reverse_infer_text = "_Reverse_infer" if self.REVERSE_INFER else ""
