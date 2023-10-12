@@ -383,6 +383,7 @@ class AOTEngine(nn.Module):
 
     def match_propogate_one_frame(self, img=None, img_embs=None, mask=None, output_size=None):
         self.frame_step += 1
+        # print(f"{self.frame_step = }")
         if (not self.enable_offline_enc) and (img is None):
             img = self.split_all_frames[self.frame_step]
         if img_embs is None:
