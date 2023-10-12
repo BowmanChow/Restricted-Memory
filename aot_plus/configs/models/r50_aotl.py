@@ -10,8 +10,8 @@ class ModelConfig(DefaultModelConfig):
         self.NO_MEMORY_GAP = False
         self.MODEL_ATT_HEADS = 2 if self.NO_MEMORY_GAP else self.MODEL_ATT_HEADS
         mem_gap_text = "_No_mem_gap" if self.NO_MEMORY_GAP else ""
-        self.REVERSE_INFER = True
-        reverse_infer_text = "_Reverse_infer" if self.REVERSE_INFER else ""
+        self.REVERSE_INFER = False
+        reverse_infer_text = f"_Reverse_infer_detach_short" if self.REVERSE_INFER else ""
         self.MODEL_NAME = f'R50_AOTL{long_mem_text}{mem_gap_text}{reverse_infer_text}'
 
         self.MODEL_ENCODER = 'resnet50'
