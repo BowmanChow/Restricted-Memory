@@ -10,7 +10,7 @@ class EngineConfig(DefaultEngineConfig):
         self.init_dir()
 
         self.DATASETS = ['vost']
-        self.TRAIN_TOTAL_STEPS = 40000
+        self.TRAIN_TOTAL_STEPS = 20000
         self.TRAIN_SAVE_STEP = 500
         self.DATA_SEQ_LEN = 17
         self.TRAIN_LONG_TERM_MEM_GAP = 4 if not (hasattr(self, "NO_MEMORY_GAP") and self.NO_MEMORY_GAP) else 1
