@@ -192,7 +192,9 @@ class LongShortTermTransformer(nn.Module):
         self.short_term_memories = self.short_term_memories_list[0]
 
         if is_update_long_memory:
-            self.update_long_term_memory(self.lstt_curr_memories)
+            self.update_long_term_memory(
+                self.lstt_curr_memories,
+            )
 
     def update_long_term_memory(
             self,
