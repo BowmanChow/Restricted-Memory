@@ -13,6 +13,7 @@ model="r50_aotl"
 # model="swinb_aotl"
 	
 stage="pre_vost"
+# stage="pre_vost_2"
 result_path=$(python -c "from tools.get_config import get_config ;cfg = get_config('$stage', '$exp', '$model') ;print(cfg.DIR_RESULT)")
 echo "result_path=$result_path"
 CUDA_VISIBLE_DEVICES=${devices} python tools/train.py --amp \
