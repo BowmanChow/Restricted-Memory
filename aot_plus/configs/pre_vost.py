@@ -16,5 +16,6 @@ class EngineConfig(DefaultEngineConfig):
         self.MODEL_LINEAR_Q = False
         self.MODEL_IGNORE_TOKEN = True
 
+        self.TRAIN_AUTO_RESUME = False
         self.PRETRAIN_FULL = True  # if False, load encoder only
         self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'R50_AOTL_PRE_YTB_DAV.pth')
