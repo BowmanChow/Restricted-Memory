@@ -1,2 +1,5 @@
-__pycache__
 .vscode
+pretrained_models/*
+__pycache__/
+*.py[cod]
+*$py.class
