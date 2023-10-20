@@ -119,7 +119,8 @@ class DefaultEngineConfig():
         self.DIST_START_GPU = 0
 
     def init_dir(self):
-        self.DIR_DATA = './datasets'
+        self.DIR_DATA = '/shared/rsaas/ziqip2/vos_datasets/'
+        # self.DIR_DATA = './datasets'
         self.DIR_DAVIS = os.path.join(self.DIR_DATA, 'DAVIS')
         self.DIR_VOST = os.path.join(self.DIR_DATA, 'VOST')
         self.DIR_VISOR = os.path.join(self.DIR_DATA, 'VISOR')

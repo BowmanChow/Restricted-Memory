@@ -1,0 +1,11 @@
+Requirements = (machine == "vision-01.cs.illinois.edu")
+Executable   = vost_train.sh
+Log          = condor_logs/baseline/log.txt
+Output       = condor_logs/baseline/stdout.txt
+Error        = condor_logs/baseline/stderr.txt
+# Use this to make sure 1 gpu is available. The key words are case insensitive. 
+REquest_gpus = 8
+# Note: to use multiple CPUs instead of the default (one CPU), use request_cpus as well
+Request_cpus = 16
+# "Queue" means add the setup until this line to the queue.
+Queue
