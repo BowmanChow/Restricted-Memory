@@ -313,13 +313,16 @@ class AOTEngine(nn.Module):
         self.curr_id_embs = curr_id_emb
 
         # self matching and propagation
+        if self.AOT.use_temporal_pe:
+            temporal_pos_emb = torch.cat((self.AOT.cur_pos_emb, self.AOT.mem_pos_emb), dim=0) 
+        else:
+            temporal_pos_emb = None
         curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
             curr_id_emb,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
-            temporal_encoding=self.temporal_encoding[0:1, ...]
-            if self.temporal_encoding is not None else None,
+            temporal_encoding=temporal_pos_emb,
         )
 
         self.last_mem_step = frame_step
@@ -405,17 +408,17 @@ class AOTEngine(nn.Module):
                 scale=1.57,
                 # is_debug=True,
             )
+        
+        if self.AOT.use_temporal_pe:
+            temporal_pos_emb = torch.cat((self.AOT.cur_pos_emb, self.AOT.mem_pos_emb), dim=0) 
+        else:
+            temporal_pos_emb = None
         curr_lstt_output = self.AOT.LSTT_forward(
             curr_enc_embs,
             None,
             pos_emb=self.pos_emb,
             size_2d=self.enc_size_2d,
-            temporal_encoding=self.temporal_encoding[
-                :-1, ...]
-            if "time_encode_2" in self.cfg.EXP_NAME else
-            self.temporal_encoding[
-                0:self.frame_step:self.long_term_mem_gap, ...]
-            if self.temporal_encoding is not None else None,
+            temporal_encoding=temporal_pos_emb,
         )
 
         return self.decode_current_logits(curr_enc_embs, curr_lstt_output, output_size=output_size)

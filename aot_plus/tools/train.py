@@ -24,7 +24,7 @@ def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
         import os
         os.environ['CUDNN_DETERMINISTIC'] = '1'
         os.environ['PYTHONHASHSEED'] = str(random_seed)
-        # os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
+        os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
         import random
         random.seed(random_seed+1)
         import numpy as np
@@ -35,7 +35,7 @@ def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
         torch.cuda.manual_seed_all(random_seed+5)
         torch.backends.cudnn.deterministic=True
         torch.backends.cudnn.benchmark = False
-        # torch.use_deterministic_algorithms(True)
+        torch.use_deterministic_algorithms(True)
     # Initiate a training manager
     if gpu == 0:
         sys.stdout = Tee(os.path.join(log_dir, "print.log"))
@@ -71,6 +71,7 @@ def main():
     parser.add_argument('--fix_random', action='store_true')
     parser.set_defaults(fix_random=False)
 
+    parser.add_argument('--use_temporal_pe', action='store_true', default=False)
     args = parser.parse_args()
 
     cfg = get_config(args.stage, args.exp_name, args.model)
@@ -105,6 +106,8 @@ def main():
             random.randint(0, 9))
     else:
         cfg.DIST_URL = args.dist_url
+    
+    cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING = args.use_temporal_pe
 
     cfg.save_self()
 
