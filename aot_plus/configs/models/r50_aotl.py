@@ -26,3 +26,6 @@ class ModelConfig(DefaultModelConfig):
         self.TRAIN_LONG_TERM_MEM_GAP = 2
 
         self.TEST_LONG_TERM_MEM_GAP = 5
+
+        # Temporal Positional Embedding
+        self.USE_TEMPORAL_POSITIONAL_EMBEDDING = False
