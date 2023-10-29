@@ -24,7 +24,7 @@ def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
         import os
         os.environ['CUDNN_DETERMINISTIC'] = '1'
         os.environ['PYTHONHASHSEED'] = str(random_seed)
-        os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
+        # os.environ['CUBLAS_WORKSPACE_CONFIG']=":4096:8"
         import random
         random.seed(random_seed+1)
         import numpy as np
@@ -35,7 +35,7 @@ def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
         torch.cuda.manual_seed_all(random_seed+5)
         torch.backends.cudnn.deterministic=True
         torch.backends.cudnn.benchmark = False
-        torch.use_deterministic_algorithms(True)
+        # torch.use_deterministic_algorithms(True)
     # Initiate a training manager
     if gpu == 0:
         sys.stdout = Tee(os.path.join(log_dir, "print.log"))

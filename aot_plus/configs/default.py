@@ -80,9 +80,11 @@ class DefaultEngineConfig():
         self.TRAIN_EVAL = False
         self.TRAIN_MAX_KEEP_CKPT = 8
         self.TRAIN_RESUME = True
+        self.TRAIN_RESUME = False
         self.TRAIN_RESUME_CKPT = None
         self.TRAIN_RESUME_STEP = 0
         self.TRAIN_AUTO_RESUME = True
+        self.TRAIN_AUTO_RESUME = False
         self.TRAIN_DATASET_FULL_RESOLUTION = False
         self.TRAIN_ENCODER_FREEZE_AT = 2
         try:
@@ -119,8 +121,8 @@ class DefaultEngineConfig():
         self.DIST_START_GPU = 0
 
     def init_dir(self):
-        self.DIR_DATA = '/space_gpu1/datasets/vos/'
-        # self.DIR_DATA = './datasets'
+        # self.DIR_DATA = '/space_gpu1/datasets/vos/'
+        self.DIR_DATA = './datasets'
         self.DIR_DAVIS = os.path.join(self.DIR_DATA, 'DAVIS')
         self.DIR_VOST = os.path.join(self.DIR_DATA, 'VOST')
         self.DIR_VISOR = os.path.join(self.DIR_DATA, 'VISOR')
