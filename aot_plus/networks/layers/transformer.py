@@ -163,11 +163,11 @@ class LongShortTermTransformer(nn.Module):
         return output
 
     def update_short_memories(
-            self,
-            curr_id_emb,
-            short_term_mem_skip,
-            is_update_long_memory,
-        ):
+        self,
+        curr_id_emb,
+        short_term_mem_skip,
+        is_update_long_memory,
+    ):
         lstt_curr_memories_2d = []
         for layer_idx in range(len(self.lstt_curr_memories)):
             curr_v = self.lstt_curr_memories[layer_idx][1]
@@ -199,9 +199,9 @@ class LongShortTermTransformer(nn.Module):
             )
 
     def update_long_term_memory(
-            self,
-            new_long_term_memories,
-        ):
+        self,
+        new_long_term_memories,
+    ):
         updated_long_term_memories = []
         max_size = 48840
         for new_long_term_memory, last_long_term_memory in zip(
@@ -217,11 +217,11 @@ class LongShortTermTransformer(nn.Module):
         self.long_term_memories = updated_long_term_memories
 
     def restrict_long_memories(
-            self,
-            former_memory_len,
-            latter_memory_len,
-            use_atten_weight=False,
-        ):
+        self,
+        former_memory_len,
+        latter_memory_len,
+        use_atten_weight=False,
+    ):
         to_drop_idx = former_memory_len
         if use_atten_weight:
             attn_weight = torch.stack([
