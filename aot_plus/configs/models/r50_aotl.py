@@ -6,7 +6,7 @@ class ModelConfig(DefaultModelConfig):
         super().__init__()
         self.FORMER_MEM_LEN = 1
         self.LATTER_MEM_LEN = 7
-        self.TIME_ENCODE = True
+        self.TIME_ENCODE = False
         self.TIME_ENCODE_NORM = self.TIME_ENCODE and True
         time_encode_text = f"_Time_encode{'_norm' if self.TIME_ENCODE_NORM else ''}" if self.TIME_ENCODE else ""
         self.USE_MASK = False
