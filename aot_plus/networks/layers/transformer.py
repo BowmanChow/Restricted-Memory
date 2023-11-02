@@ -404,8 +404,10 @@ class SimplifiedTransformerBlock(nn.Module):
                 is_return_attn_weight=save_atten_weights,
             )
         if save_atten_weights:
-            self.short_attn_values, self.short_attn_indices = short_attn.detach().mean(dim=1).topk(32, dim=-1)
-            self.short_attn_values, self.short_attn_indices = self.short_attn_values.cpu().squeeze(), self.short_attn_indices.cpu().squeeze()
+            self.short_attn_values, self.short_attn_indices = \
+                short_attn.detach().mean(dim=1).topk(32, dim=-1)
+            self.short_attn_values, self.short_attn_indices = \
+                self.short_attn_values.cpu().squeeze(), self.short_attn_indices.cpu().squeeze()
 
         _tgt3 = tgt3
 
