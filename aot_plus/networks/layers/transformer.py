@@ -221,12 +221,14 @@ class LongShortTermTransformer(nn.Module):
             former_memory_len,
             latter_memory_len,
         ):
+        to_drop_idx = former_memory_len
+        # print(f"{to_drop_idx = }")
         for layer_idx in range(len(self.layers)):
             memory_k_v = self.long_term_memories[layer_idx]
             for i in range(len(memory_k_v)):
                 mem = memory_k_v[i]
                 if mem.size(0) > (former_memory_len + latter_memory_len):
-                    new_mem = torch.cat([mem[0:former_memory_len, ...], mem[-latter_memory_len:, ...]], dim=0)
+                    new_mem = torch.cat([mem[0:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
                     self.long_term_memories[layer_idx][i] = new_mem
 
     def init_memory(self):
