@@ -83,6 +83,8 @@ def main():
     parser.add_argument('--fix_random', action='store_true')
     parser.set_defaults(fix_random=False)
 
+    parser.add_argument('--use_temporal_pe', action='store_true', default=False)
+
     args = parser.parse_args()
 
     sys.path.append(f"{args.result_path}/")
@@ -113,6 +115,8 @@ def main():
 
     cfg.TEST_MIN_SIZE = None
     cfg.TEST_MAX_SIZE = args.max_resolution * 800. / 480.
+
+    cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING = args.use_temporal_pe
 
     setattr(cfg, "EVAL_NAME", args.eval_name)
     setattr(cfg, "DEBUG_FIX_RANDOM", args.debug_fix_random)

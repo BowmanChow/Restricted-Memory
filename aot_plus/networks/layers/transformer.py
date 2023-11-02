@@ -339,17 +339,36 @@ class SimplifiedTransformerBlock(nn.Module):
             global_K, global_V = long_term_memory
             local_K, local_V = short_term_memory
 
-        if temporal_encoding is None:
+        if temporal_encoding is not None:
+            T, token_num, bs, embed_dim = global_K.shape
+            cur_pos_emb, mem_pos_emb = temporal_encoding[0:1], temporal_encoding[1:]
+
+            if T == 1:
+                flatten_global_K = global_K + mem_pos_emb[0].view(1 ,1, 1, embed_dim)
+                flatten_global_K = flatten_global_K.flatten(0, 1)
+
+                flatten_Q = curr_Q + cur_pos_emb.view(1, 1, embed_dim)
+                flatten_global_V = global_V.flatten(0, 1)
+            else:
+                interpolated_mem_pe = mem_pos_emb.clone().permute(1, 0).view(1, embed_dim, 2)
+                interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=T, mode='linear', align_corners=True)
+                interpolated_mem_pe = interpolated_mem_pe.view(embed_dim, T).permute(1, 0).contiguous()
+
+                flatten_global_K = global_K.view(T, token_num, bs, embed_dim) + interpolated_mem_pe.view(T, 1, 1, embed_dim)
+                flatten_global_K = global_K.flatten(0, 1)
+
+                flatten_Q = curr_Q + cur_pos_emb.view(1, 1, embed_dim)
+                flatten_global_V = global_V.flatten(0, 1)
+        else:    
             flatten_global_K = global_K.flatten(0, 1)
             flatten_global_V = global_V.flatten(0, 1)
-        else:
-            flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
-            flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
+            flatten_Q = curr_Q
 
         tgt2, attn = self.long_term_attn(
-            curr_Q, flatten_global_K, flatten_global_V,
+            flatten_Q, flatten_global_K, flatten_global_V,
             is_return_attn_weight=save_atten_weights,
         )
+
         if save_atten_weights:
             self.record_T = attn.size(-1) // attn.size(-2)
             self.attn_values, self.attn_indices = attn.detach().mean(dim=1).topk(32, dim=-1)

@@ -67,7 +67,7 @@ class DefaultEngineConfig():
         self.TRAIN_GPUS = 4
         self.TRAIN_BATCH_SIZE = 16
         self.TRAIN_TBLOG = False
-        self.TRAIN_TBLOG_STEP = 50
+        self.TRAIN_TBLOG_STEP = 500
         self.TRAIN_LOG_STEP = 20
         self.TRAIN_IMG_LOG = True
         self.TRAIN_TOP_K_PERCENT_PIXELS = 0.15
@@ -76,7 +76,7 @@ class DefaultEngineConfig():
         self.TRAIN_HARD_MINING_RATIO = 0.5
         self.TRAIN_EMA_RATIO = 0.1
         self.TRAIN_CLIP_GRAD_NORM = 5.
-        self.TRAIN_SAVE_STEP = 500
+        self.TRAIN_SAVE_STEP = 2000
         self.TRAIN_EVAL = False
         self.TRAIN_MAX_KEEP_CKPT = 8
         self.TRAIN_RESUME = False
@@ -119,7 +119,7 @@ class DefaultEngineConfig():
         self.DIST_START_GPU = 0
 
     def init_dir(self):
-        self.DIR_DATA = './datasets'
+        self.DIR_DATA = '/scratch/bbsh/ziqip2/vos/'
         self.DIR_DAVIS = os.path.join(self.DIR_DATA, 'DAVIS')
         self.DIR_VOST = os.path.join(self.DIR_DATA, 'VOST')
         self.DIR_VISOR = os.path.join(self.DIR_DATA, 'VISOR')

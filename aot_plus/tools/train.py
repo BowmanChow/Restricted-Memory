@@ -71,6 +71,8 @@ def main():
     parser.add_argument('--fix_random', action='store_true')
     parser.set_defaults(fix_random=False)
 
+    parser.add_argument('--use_temporal_pe', action='store_true', default=False)
+
     args = parser.parse_args()
 
     cfg = get_config(args.stage, args.exp_name, args.model)
@@ -105,6 +107,8 @@ def main():
             random.randint(0, 9))
     else:
         cfg.DIST_URL = args.dist_url
+    
+    cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING = args.use_temporal_pe
 
     cfg.save_self()
 
