@@ -43,6 +43,7 @@ class AOT(nn.Module):
             linear_q=cfg.MODEL_LINEAR_Q,
             norm_inp=cfg.MODEL_NORM_INP,
             time_encode=cfg.TIME_ENCODE,
+        )
 
         decoder_indim = cfg.MODEL_ENCODER_EMBEDDING_DIM * \
             (cfg.MODEL_LSTT_NUM + 1) if cfg.MODEL_DECODER_INTERMEDIATE_LSTT else \
