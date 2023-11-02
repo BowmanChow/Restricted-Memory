@@ -220,8 +220,22 @@ class LongShortTermTransformer(nn.Module):
             self,
             former_memory_len,
             latter_memory_len,
+            use_atten_weight=False,
         ):
         to_drop_idx = former_memory_len
+        if use_atten_weight:
+            attn_weight = torch.stack([
+                self.layers[0].record_attn_weight,
+                self.layers[0].record_attn_weight,
+                self.layers[1].record_attn_weight,
+                self.layers[2].record_attn_weight,
+            ]).mean(dim=0)
+            # print(f"{attn_weight = }")
+            ignore_former_size = 1
+            attn_weight_remove_0 = attn_weight[ignore_former_size:]
+            if attn_weight_remove_0.size(0) > 0:
+                to_drop_idx = torch.argmin(attn_weight_remove_0).item()
+                to_drop_idx += ignore_former_size
         # print(f"{to_drop_idx = }")
         for layer_idx in range(len(self.layers)):
             memory_k_v = self.long_term_memories[layer_idx]
