@@ -49,6 +49,7 @@ class LongShortTermTransformer(nn.Module):
         final_norm=True,
         linear_q=False,
         norm_inp=False,
+        time_encode=False,
     ):
 
         super().__init__()
@@ -74,6 +75,7 @@ class LongShortTermTransformer(nn.Module):
                     dim_feedforward, droppath_rate,
                     activation,
                     linear_q=linear_q,
+                    time_encode=time_encode,
                 ))
         self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(
             layers)
@@ -252,6 +254,7 @@ class SimplifiedTransformerBlock(nn.Module):
         droppath=0.1,
         activation="gelu",
         linear_q=False,
+        time_encode=False,
     ):
         super().__init__()
 
@@ -292,6 +295,17 @@ class SimplifiedTransformerBlock(nn.Module):
         self.linear_q = linear_q
         self._init_weight()
 
+        if time_encode:
+            self.Q_time_encode = nn.Sequential(
+                nn.Linear(in_features=d_model, out_features=d_model),
+                nn.ReLU(),
+                nn.Linear(in_features=d_model, out_features=d_model),
+            )
+            self.K_time_encode = nn.Sequential(
+                nn.Linear(in_features=d_model, out_features=d_model),
+                nn.ReLU(),
+                nn.Linear(in_features=d_model, out_features=d_model),
+            )
     def with_pos_embed(self, tensor, pos=None):
         size = tensor.size()
         if len(size) == 4 and pos is not None:
@@ -342,12 +356,16 @@ class SimplifiedTransformerBlock(nn.Module):
         if temporal_encoding is None:
             flatten_global_K = global_K.flatten(0, 1)
             flatten_global_V = global_V.flatten(0, 1)
+            curr_Q_add_time = curr_Q
         else:
-            flatten_global_K = (global_K + temporal_encoding).flatten(0, 1)
-            flatten_global_V = (global_V + temporal_encoding).flatten(0, 1)
+            Q_temp_encoding = self.Q_time_encode(temporal_encoding[-1, ...])
+            K_temp_encoding = self.K_time_encode(temporal_encoding[:-1, ...])
+            curr_Q_add_time = curr_Q + Q_temp_encoding
+            flatten_global_K = (global_K + K_temp_encoding).flatten(0, 1)
+            flatten_global_V = (global_V).flatten(0, 1)
 
         tgt2, attn = self.long_term_attn(
-            curr_Q, flatten_global_K, flatten_global_V,
+            curr_Q_add_time, flatten_global_K, flatten_global_V,
             is_return_attn_weight=save_atten_weights,
         )
         if save_atten_weights:

@@ -6,6 +6,9 @@ class ModelConfig(DefaultModelConfig):
         super().__init__()
         self.FORMER_MEM_LEN = 1
         self.LATTER_MEM_LEN = 7
+        self.TIME_ENCODE = True
+        self.TIME_ENCODE_NORM = self.TIME_ENCODE and True
+        time_encode_text = f"_Time_encode{'_norm' if self.TIME_ENCODE_NORM else ''}" if self.TIME_ENCODE else ""
         self.USE_MASK = False
         self.NO_LONG_MEMORY = False
         long_mem_text = "_No_long_mem" if self.NO_LONG_MEMORY else ""
@@ -16,7 +19,7 @@ class ModelConfig(DefaultModelConfig):
         self.REVERSE_LOSS = 0.4
         self.REVERSE_LOSS = self.REVERSE_LOSS / 4 if self.NO_MEMORY_GAP else self.REVERSE_LOSS
         reverse_infer_text = f"_Reverse_infer_detach_short_loss_{self.REVERSE_LOSS}" if self.REVERSE_INFER else ""
-        self.MODEL_NAME = f'R50_AOTL{long_mem_text}{mem_gap_text}{reverse_infer_text}'
+        self.MODEL_NAME = f'R50_AOTL{time_encode_text}{long_mem_text}{mem_gap_text}{reverse_infer_text}'
 
         self.MODEL_ENCODER = 'resnet50'
         self.MODEL_ENCODER_PRETRAIN = './pretrain_models/resnet50-0676ba61.pth'  # https://download.pytorch.org/models/resnet50-0676ba61.pth

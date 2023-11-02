@@ -1,6 +1,4 @@
 exp="aotplus"
-# exp="aotplus_time_encode"
-# exp="aotplus_time_encode_2"
 # exp="debug"
 gpu_num="1"
 devices="4"
