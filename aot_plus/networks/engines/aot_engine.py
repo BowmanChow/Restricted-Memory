@@ -314,7 +314,7 @@ class AOTEngine(nn.Module):
         )
 
         self.last_mem_step = frame_step
-        self.AOT.init_LSTT_memory()
+        self.AOT.init_LSTT_memory(size_2d=self.enc_size_2d)
 
         self.decode_current_logits(curr_enc_embs, curr_lstt_output)
 

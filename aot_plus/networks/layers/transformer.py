@@ -246,7 +246,7 @@ class LongShortTermTransformer(nn.Module):
                         [mem[0:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
                     self.long_term_memories[layer_idx][i] = new_mem
 
-    def init_memory(self):
+    def init_memory(self, size_2d=(30, 30)):
         self.long_term_memories = self.lstt_long_memories
         self.short_term_memories_list = [self.lstt_short_memories]
         self.short_term_memories = self.lstt_short_memories

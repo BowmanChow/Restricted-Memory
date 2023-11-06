@@ -169,8 +169,8 @@ class AOT(nn.Module):
         self.__var_losses = []
         return var_loss
 
-    def init_LSTT_memory(self):
-        self.LSTT.init_memory()
+    def init_LSTT_memory(self, size_2d=(30, 30)):
+        self.LSTT.init_memory(size_2d)
 
     def clear_LSTT_memory(self):
         self.LSTT.clear_memory()
