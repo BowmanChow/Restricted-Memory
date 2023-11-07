@@ -29,6 +29,92 @@ def _get_activation_fn(activation):
         F"activation should be relu/gele/glu, not {activation}.")
 
 
+class ConvGRUCell(nn.Module):
+    def __init__(self, input_dim, hidden_dim, kernel_size, bias):
+        """
+        Initialize the ConvLSTM cell
+        :param input_dim: int
+            Number of channels of input tensor.
+        :param hidden_dim: int
+            Number of channels of hidden state.
+        :param kernel_size: (int, int)
+            Size of the convolutional kernel.
+        :param bias: bool
+            Whether or not to add the bias.
+        :param dtype: torch.cuda.FloatTensor or torch.FloatTensor
+            Whether or not to use cuda.
+        """
+        super(ConvGRUCell, self).__init__()
+        # self.padding = kernel_size[0] // 2, kernel_size[1] // 2
+        self.padding = "same"
+        self.hidden_dim = hidden_dim
+        self.bias = bias
+
+        self.conv_gates = nn.Conv2d(
+            in_channels=input_dim + hidden_dim,
+            out_channels=2*self.hidden_dim,  # for update_gate,reset_gate respectively
+            kernel_size=kernel_size,
+            padding=self.padding,
+            bias=self.bias,
+        )
+
+        self.conv_can = nn.Conv2d(
+            in_channels=input_dim+hidden_dim,
+            out_channels=self.hidden_dim,  # for candidate neural memory
+            kernel_size=kernel_size,
+            padding=self.padding,
+            bias=self.bias,
+        )
+
+    def init_hidden(batch_size, hidden_dim, input_size, dtype):
+        height, width = input_size
+        return (torch.autograd.Variable(torch.zeros(batch_size, hidden_dim, height, width)).type(dtype))
+
+    def forward(self, input_tensor, h_cur):
+        """
+
+        :param self:
+        :param input_tensor: (b, c, h, w)
+            input is actually the target_model
+        :param h_cur: (b, c_hidden, h, w)
+            current hidden and cell states respectively
+        :return: h_next,
+            next hidden state
+        """
+        combined = torch.cat([input_tensor, h_cur], dim=1)
+        combined_conv = self.conv_gates(combined)
+
+        gamma, beta = torch.split(combined_conv, self.hidden_dim, dim=1)
+        reset_gate = torch.sigmoid(gamma)
+        update_gate = torch.sigmoid(beta)
+
+        combined = torch.cat([input_tensor, reset_gate*h_cur], dim=1)
+        cc_cnm = self.conv_can(combined)
+        cnm = torch.tanh(cc_cnm)
+
+        h_next = (1 - update_gate) * h_cur + update_gate * cnm
+        return h_next
+
+
+class ConvGRUCellOutput(nn.Module):
+    def __init__(self, input_dim, hidden_dim, kernel_size, bias, output_dim) -> None:
+        super(ConvGRUCellOutput, self).__init__()
+        self.conv_gru_cell = ConvGRUCell(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            kernel_size=kernel_size,
+            bias=bias,
+        )
+        self.output_conv = nn.Conv2d(
+            in_channels=hidden_dim,
+            out_channels=output_dim,
+            kernel_size=1,
+        )
+    def forward(self, input_tensor, h_cur):
+        h_next = self.conv_gru_cell(input_tensor, h_cur)
+        return h_next, self.output_conv(h_next)
+
+
 class LongShortTermTransformer(nn.Module):
     def __init__(
         self,
@@ -50,6 +136,7 @@ class LongShortTermTransformer(nn.Module):
         linear_q=False,
         norm_inp=False,
         time_encode=False,
+        gru_memory=False,
     ):
 
         super().__init__()
@@ -59,6 +146,7 @@ class LongShortTermTransformer(nn.Module):
         self.return_intermediate = return_intermediate
 
         self.emb_dropout = nn.Dropout(emb_dropout, True)
+        self.gru_memory = gru_memory
 
         layers: List[SimplifiedTransformerBlock] = []
         for idx in range(num_layers):
@@ -76,6 +164,7 @@ class LongShortTermTransformer(nn.Module):
                     activation,
                     linear_q=linear_q,
                     time_encode=time_encode,
+                    gru_memory=gru_memory,
                 ))
         self.layers: Iterable[SimplifiedTransformerBlock] = nn.ModuleList(
             layers)
@@ -223,6 +312,8 @@ class LongShortTermTransformer(nn.Module):
         use_atten_weight=False,
     ):
         to_drop_idx = former_memory_len
+        if self.gru_memory:
+            to_drop_idx += 1
         if use_atten_weight:
             attn_weight = torch.stack([
                 self.layers[0].record_attn_weight,
@@ -232,6 +323,8 @@ class LongShortTermTransformer(nn.Module):
             ]).mean(dim=0)
             # print(f"{attn_weight = }")
             ignore_former_size = 1
+            if self.gru_memory:
+                ignore_former_size += 1
             attn_weight_remove_0 = attn_weight[ignore_former_size:]
             if attn_weight_remove_0.size(0) > 0:
                 to_drop_idx = torch.argmin(attn_weight_remove_0).item()
@@ -242,14 +335,36 @@ class LongShortTermTransformer(nn.Module):
             for i in range(len(memory_k_v)):
                 mem = memory_k_v[i]
                 if mem.size(0) > (former_memory_len + latter_memory_len):
-                    new_mem = torch.cat(
-                        [mem[0:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
+                    if self.gru_memory:
+                        gru = self.layers[layer_idx].memory_grus[i]
+                        # gru = mean_gru
+                        hidden_state = self.long_term_memory_hidden_states[layer_idx][i]
+                        size_2d = self.long_term_memory_hidden_states[0][0].size()[2:]
+                        gru_input = lbc_2_bchw(mem[to_drop_idx, ...], size_2d)
+                        hidden_state, gru_output = gru(gru_input, hidden_state)
+                        gru_output = bchw_2_lbc(gru_output)
+                        new_mem = torch.cat(
+                            [mem[0:1, ...], gru_output[None, ...], mem[2:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
+                        self.long_term_memory_hidden_states[layer_idx][i] = hidden_state
+                    else:
+                        new_mem = torch.cat(
+                            [mem[0:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
                     self.long_term_memories[layer_idx][i] = new_mem
 
     def init_memory(self, size_2d=(30, 30)):
         self.long_term_memories = self.lstt_long_memories
         self.short_term_memories_list = [self.lstt_short_memories]
         self.short_term_memories = self.lstt_short_memories
+        if self.gru_memory:
+            l, b, c = self.short_term_memories[0][0].size()
+            dtype = self.short_term_memories[0][0].dtype
+            device = self.short_term_memories[0][0].device
+            self.long_term_memory_hidden_states = [
+                [
+                    ConvGRUCell.init_hidden(b, c, size_2d, dtype).to(device),
+                    ConvGRUCell.init_hidden(b, c, size_2d, dtype).to(device),
+                ] for _ in range(len(self.layers))
+            ]
 
     def clear_memory(self):
         self.lstt_curr_memories = None
@@ -259,6 +374,7 @@ class LongShortTermTransformer(nn.Module):
         self.short_term_memories_list = []
         self.short_term_memories = None
         self.long_term_memories = None
+        self.long_term_memory_hidden_states = None
 
 
 class SimplifiedTransformerBlock(nn.Module):
@@ -272,6 +388,7 @@ class SimplifiedTransformerBlock(nn.Module):
         activation="gelu",
         linear_q=False,
         time_encode=False,
+        gru_memory=False,
     ):
         super().__init__()
 
@@ -323,6 +440,23 @@ class SimplifiedTransformerBlock(nn.Module):
                 nn.ReLU(),
                 nn.Linear(in_features=d_model, out_features=d_model),
             )
+        if gru_memory:
+            self.memory_grus = nn.ModuleList([
+                ConvGRUCellOutput(
+                    input_dim=d_model,
+                    hidden_dim=d_model,
+                    kernel_size=(2, 2),
+                    bias=True,
+                    output_dim=d_model,
+                ),
+                ConvGRUCellOutput(
+                    input_dim=d_model,
+                    hidden_dim=d_model,
+                    kernel_size=(1, 1),
+                    bias=True,
+                    output_dim=d_model,
+                ),
+            ])
     def with_pos_embed(self, tensor, pos=None):
         size = tensor.size()
         if len(size) == 4 and pos is not None:
