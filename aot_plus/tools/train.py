@@ -19,7 +19,7 @@ from get_config import get_config
 
 def main_worker(gpu, cfg, enable_amp=True, exp_name='default', log_dir=None):
     if cfg.FIX_RANDOM:
-        random_seed = 1 << gpu
+        random_seed = cfg.FIX_RANDOM << gpu
         print(f"[{gpu}] : Fix random seed {random_seed}")
         import os
         os.environ['CUDNN_DETERMINISTIC'] = '1'
@@ -68,8 +68,7 @@ def main():
 
     parser.add_argument('--debug_fix_random', action='store_true')
     parser.set_defaults(debug_fix_random=False)
-    parser.add_argument('--fix_random', action='store_true')
-    parser.set_defaults(fix_random=False)
+    parser.add_argument('--fix_random', type=int, default=0)
 
     parser.add_argument('--use_temporal_pe', action='store_true', default=False)
 

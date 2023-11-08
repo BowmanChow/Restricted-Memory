@@ -92,10 +92,10 @@ class AOT(nn.Module):
 
         self.use_temporal_pe = cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING
         if self.cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING:
-            self.cur_pos_emb = nn.Parameter(torch.randn(1, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.1)
-            self.mem_pos_emb = nn.Parameter(torch.randn(2, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.1)
-            trunc_normal_(self.cur_pos_emb, std=.1)
-            trunc_normal_(self.mem_pos_emb, std=.1)
+            self.cur_pos_emb = nn.Parameter(torch.randn(1, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.05)
+            self.mem_pos_emb = nn.Parameter(torch.randn(2, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.05)
+            trunc_normal_(self.cur_pos_emb, std=.05)
+            trunc_normal_(self.mem_pos_emb, std=.05)
         else:
             self.temporal_encoding = None
 

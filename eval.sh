@@ -9,7 +9,7 @@
 #SBATCH --time=1:00:00      ## hh:mm:ss for the job
 ### GPU options ###
 #SBATCH --mail-user=ziqip2@illinois.edu
-#SBATCH -o ./delta_logs/pe_eval.out
+#SBATCH -o ./delta_logs/baseline_eval.out
  
 source ~/.bashrc
 module reset
@@ -17,5 +17,5 @@ conda activate /projects/bbsh/ziqip2/conda_envs/aot
 
 cd evaluation
 
-python evaluation_method.py --results_path ../aot_plus/results/pe_R50_AOTL/pre_vost/eval/vost/cap_1_3 \
+python evaluation_method.py --results_path ../aot_plus/results/baseline_r1_R50_AOTL/pre_vost/eval/vost/cap_1_3 \
     --dataset_path /scratch/bbsh/ziqip2/vos/VOST --re
