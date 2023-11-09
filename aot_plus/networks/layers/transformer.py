@@ -321,6 +321,7 @@ class LongShortTermTransformer(nn.Module):
                 self.layers[1].record_attn_weight,
                 self.layers[2].record_attn_weight,
             ]).mean(dim=0)
+            attn_weight = attn_weight.cpu()
             # print(f"{attn_weight = }")
             ignore_former_size = 1
             if self.gru_memory:
