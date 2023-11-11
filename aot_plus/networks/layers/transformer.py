@@ -343,6 +343,8 @@ class SimplifiedTransformerBlock(nn.Module):
             T, token_num, bs, embed_dim = global_K.shape
             cur_pos_emb, mem_pos_emb = temporal_encoding[0:1], temporal_encoding[1:]
 
+            max_T = 4
+
             if T == 1:
                 flatten_global_K = global_K + mem_pos_emb[0].view(1 ,1, 1, embed_dim)
                 flatten_global_K = flatten_global_K.flatten(0, 1)
@@ -350,12 +352,30 @@ class SimplifiedTransformerBlock(nn.Module):
                 flatten_Q = curr_Q + cur_pos_emb.view(1, 1, embed_dim)
                 flatten_global_V = global_V.flatten(0, 1)
             else:
-                interpolated_mem_pe = mem_pos_emb.clone().permute(1, 0).view(1, embed_dim, 2)
-                interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=T, mode='linear', align_corners=True)
-                interpolated_mem_pe = interpolated_mem_pe.view(embed_dim, T).permute(1, 0).contiguous()
+                # training
+                # interpolated_mem_pe = mem_pos_emb.clone().permute(1, 0).view(1, embed_dim, 2)
+                # interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=T, mode='linear', align_corners=True)
+                # interpolated_mem_pe = interpolated_mem_pe.view(embed_dim, T).permute(1, 0).contiguous()
 
-                flatten_global_K = global_K.view(T, token_num, bs, embed_dim) + interpolated_mem_pe.view(T, 1, 1, embed_dim)
-                flatten_global_K = global_K.flatten(0, 1)
+                # flatten_global_K = global_K.view(T, token_num, bs, embed_dim) + interpolated_mem_pe.view(T, 1, 1, embed_dim)
+                # flatten_global_K = global_K.flatten(0, 1)
+
+                # inference
+                if T <= max_T:
+                    interpolated_mem_pe = mem_pos_emb.clone().permute(1, 0).view(1, embed_dim, 2)
+                    interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=T, mode='linear', align_corners=True)
+                    interpolated_mem_pe = interpolated_mem_pe.view(embed_dim, T).permute(1, 0).contiguous()
+    
+                    flatten_global_K = global_K.view(T, token_num, bs, embed_dim) + interpolated_mem_pe.view(T, 1, 1, embed_dim)
+                    flatten_global_K = global_K.flatten(0, 1)
+                else:
+                    interpolated_mem_pe = mem_pos_emb.clone().permute(1, 0).view(1, embed_dim, 2)
+                    interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=max_T, mode='linear', align_corners=True) # 1 * embed_dim * max_T
+                    interpolated_mem_pe = F.interpolate(interpolated_mem_pe, size=T, mode='nearest') # 1 * embed_dim * T
+                    interpolated_mem_pe = interpolated_mem_pe.view(embed_dim, T).permute(1, 0).contiguous()
+    
+                    flatten_global_K = global_K.view(T, token_num, bs, embed_dim) + interpolated_mem_pe.view(T, 1, 1, embed_dim)
+                    flatten_global_K = global_K.flatten(0, 1)
 
                 flatten_Q = curr_Q + cur_pos_emb.view(1, 1, embed_dim)
                 flatten_global_V = global_V.flatten(0, 1)

@@ -17,5 +17,5 @@ conda activate /projects/bbsh/ziqip2/conda_envs/aot
 
 cd evaluation
 
-python evaluation_method.py --results_path ../aot_plus/results/baseline_r1_R50_AOTL/pre_vost/eval/vost/cap_1_3 \
+python evaluation_method.py --results_path ../aot_plus/results/pe_bs16_r1_R50_AOTL/pre_vost/eval/vost/cap_1_7 \
     --dataset_path /scratch/bbsh/ziqip2/vos/VOST --re
