@@ -102,7 +102,8 @@ def _save_mask(mask, path, squeeze_idx=None):
 
 def save_mask(mask_tensor, path, squeeze_idx=None):
     mask = mask_tensor.cpu().numpy().astype('uint8')
-    threading.Thread(target=_save_mask, args=[mask, path, squeeze_idx]).start()
+    # threading.Thread(target=_save_mask, args=[mask, path, squeeze_idx]).start()
+    _save_mask(mask, path, squeeze_idx)
 
 
 def flip_tensor(tensor, dim=0):
