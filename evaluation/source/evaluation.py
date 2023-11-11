@@ -10,6 +10,8 @@ from source import utils
 from source.results import Results
 from scipy.optimize import linear_sum_assignment
 from math import floor
+import multiprocessing as mp
+from multiprocessing import Manager
 
 
 class Evaluation(object):
@@ -49,33 +51,61 @@ class Evaluation(object):
         if 'J_last' in metric:
             metrics_res['J_last'] = {"M": [], "R": [], "D": [], "M_per_object": {}}
 
+        process_list = []
+        sema = mp.Semaphore(8)
+        manager = Manager()
+        metrics_res = manager.dict({})
+        if 'J' in metric:
+            metrics_res['J'] = manager.dict({
+                "M": manager.list(),
+                "R": manager.list(),
+                "D": manager.list(),
+                "M_per_object": manager.dict(),
+            }),
+        if 'J_last' in metric:
+            metrics_res['J_last'] = manager.dict({
+                "M": manager.list(),
+                "R": manager.list(),
+                "D": manager.list(),
+                "M_per_object": manager.dict(),
+            }),
         # Sweep all sequences
         results = Results(root_dir=res_path)
         for seq in tqdm(list(self.dataset.get_sequences())):
-            print(f"\n{seq}")
-            all_gt_masks, all_void_masks, all_masks_id = self.dataset.get_all_masks(seq, True)
-            all_gt_masks, all_masks_id = all_gt_masks[:, 1:-1, :, :], all_masks_id[1:-1]
-            num_eval_frames = len(all_masks_id)
-            last_quarter_ind = int(floor(num_eval_frames * 0.75))
-            all_res_masks = results.read_masks(seq, all_masks_id)
-            j_metrics_res = self._evaluate_semisupervised(all_gt_masks, all_res_masks, None, metric)
-            for ii in range(all_gt_masks.shape[0]):
-                seq_name = f'{seq}_{ii+1}'
-                if 'J' in metric:
-                    [JM, JR, JD] = utils.db_statistics(j_metrics_res[ii])
-                    metrics_res['J']["M"].append(JM)
-                    metrics_res['J']["R"].append(JR)
-                    metrics_res['J']["D"].append(JD)
-                    metrics_res['J']["M_per_object"][seq_name] = JM
-                if 'J_last' in metric:
-                    [JM, JR, JD] = utils.db_statistics(j_metrics_res[ii][last_quarter_ind:])
-                    metrics_res['J_last']["M"].append(JM)
-                    metrics_res['J_last']["R"].append(JR)
-                    metrics_res['J_last']["D"].append(JD)
-                    metrics_res['J_last']["M_per_object"][seq_name] = JM
+            def evaluate():
+                print(f"\n{seq}")
+                all_gt_masks, all_void_masks, all_masks_id = self.dataset.get_all_masks(seq, True)
+                num_objects = all_gt_masks.shape[0]
+                all_gt_masks, all_masks_id = all_gt_masks[:, 1:-1, :, :], all_masks_id[1:-1]
+                num_eval_frames = len(all_masks_id)
+                last_quarter_ind = int(floor(num_eval_frames * 0.75))
+                all_res_masks = results.read_masks(seq, all_masks_id)
+                j_metrics_res = self._evaluate_semisupervised(all_gt_masks, all_res_masks, None, metric)
+                for ii in range(all_gt_masks.shape[0]):
+                    seq_name = f'{seq}_{ii+1}'
+                    if 'J' in metric:
+                        [JM, JR, JD] = utils.db_statistics(j_metrics_res[ii])
+                        metrics_res['J']["M"].append(JM)
+                        metrics_res['J']["R"].append(JR)
+                        metrics_res['J']["D"].append(JD)
+                        metrics_res['J']["M_per_object"][seq_name] = JM
+                    if 'J_last' in metric:
+                        [JM, JR, JD] = utils.db_statistics(j_metrics_res[ii][last_quarter_ind:])
+                        metrics_res['J_last']["M"].append(JM)
+                        metrics_res['J_last']["R"].append(JR)
+                        metrics_res['J_last']["D"].append(JD)
+                        metrics_res['J_last']["M_per_object"][seq_name] = JM
 
-            # Show progress
-            if debug:
-                sys.stdout.write(seq + '\n')
-                sys.stdout.flush()
+                # Show progress
+                if debug:
+                    sys.stdout.write(seq + '\n')
+                    sys.stdout.flush()
+                sema.release()
+                print(f"{seq} complete ! ")
+            sema.acquire()
+            p = mp.Process(target=evaluate, args=())
+            p.start()
+            process_list.append(p)
+        for process in tqdm(process_list):
+            process.join()
         return metrics_res
