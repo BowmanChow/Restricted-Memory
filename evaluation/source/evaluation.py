@@ -54,21 +54,24 @@ class Evaluation(object):
         process_list = []
         sema = mp.Semaphore(8)
         manager = Manager()
-        metrics_res = manager.dict({})
-        if 'J' in metric:
-            metrics_res['J'] = manager.dict({
-                "M": manager.list(),
-                "R": manager.list(),
-                "D": manager.list(),
-                "M_per_object": manager.dict(),
-            }),
-        if 'J_last' in metric:
-            metrics_res['J_last'] = manager.dict({
-                "M": manager.list(),
-                "R": manager.list(),
-                "D": manager.list(),
-                "M_per_object": manager.dict(),
-            }),
+        metrics_res = manager.dict({
+            'J': manager.dict(
+                {
+                    "M": manager.list(),
+                    "R": manager.list(),
+                    "D": manager.list(),
+                    "M_per_object": manager.dict(),
+                }
+            ),
+            'J_last': manager.dict(
+                {
+                    "M": manager.list(),
+                    "R": manager.list(),
+                    "D": manager.list(),
+                    "M_per_object": manager.dict(),
+                }
+            ),
+        })
         # Sweep all sequences
         results = Results(root_dir=res_path)
         for seq in tqdm(list(self.dataset.get_sequences())):
