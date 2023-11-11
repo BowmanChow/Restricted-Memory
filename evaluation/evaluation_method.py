@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from source.evaluation import Evaluation
 
-default_dataset_path = '../aot_plus/datasets/VOST'
+default_dataset_path = 'vost'
 
 time_start = time()
 parser = argparse.ArgumentParser()
@@ -20,6 +20,11 @@ parser.add_argument('--results_path', type=str, help='Path to the folder contain
                     required=True)
 parser.add_argument('--re', action='store_true')
 args, _ = parser.parse_known_args()
+dataset_path_dict = {
+    'vost': '../aot_plus/datasets/VOST',
+    'long_videos': '../aot_plus/datasets/long_videos',
+}
+args.dataset_path = dataset_path_dict[args.dataset_path]
 csv_name_global = f'global_results-{args.set}.csv'
 csv_name_per_sequence = f'per-sequence_results-{args.set}.csv'
 

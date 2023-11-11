@@ -15,7 +15,7 @@ from torchvision import transforms
 torch.set_printoptions(linewidth=328)
 from tqdm import tqdm
 
-from dataloaders.eval_datasets import YOUTUBEVOS_Test, YOUTUBEVOS_DenseTest, DAVIS_Test, EVAL_TEST, VOST_Test
+from dataloaders.eval_datasets import YOUTUBEVOS_Test, YOUTUBEVOS_DenseTest, DAVIS_Test, EVAL_TEST, VOST_Test, LONG_VIDEOS_Test
 import dataloaders.video_transforms as tr
 
 from utils.image import flip_tensor, save_mask
@@ -194,6 +194,20 @@ class Evaluator(object):
                 full_resolution=cfg.TEST_DATASET_FULL_RESOLUTION,
                 result_root=self.result_root,
             )
+
+        elif cfg.TEST_DATASET == 'long_videos':
+            eval_name = cfg.EVAL_NAME
+            resolution = '480p'
+            self.result_root = os.path.join(cfg.DIR_EVALUATION,
+                                            cfg.TEST_DATASET,
+                                            eval_name)
+            self.dataset = LONG_VIDEOS_Test(
+                split=[cfg.TEST_DATASET_SPLIT],
+                root=cfg.DIR_LONG_VIDEOS,
+                year=2017,
+                transform=eval_transforms,
+                full_resolution=False,
+                result_root=self.result_root)
 
         elif cfg.TEST_DATASET == 'vost':
             eval_name = cfg.EVAL_NAME

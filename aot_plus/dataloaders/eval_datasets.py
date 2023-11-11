@@ -423,6 +423,37 @@ class DAVIS_Test(object):
         return seq_dataset
 
 
+class LONG_VIDEOS_Test(DAVIS_Test):
+    def __init__(self,
+                 split=['val'],
+                 root='./long_videos',
+                 year=2017,
+                 transform=None,
+                 rgb=True,
+                 full_resolution=False,
+                 result_root=None):
+        self.transform = transform
+        self.rgb = rgb
+        self.result_root = result_root
+        self.single_obj = True
+        if full_resolution:
+            resolution = 'Full-Resolution'
+        else:
+            resolution = '480p'
+        self.image_root = os.path.join(root, 'JPEGImages', resolution)
+        self.label_root = os.path.join(root, 'Annotations', resolution)
+        seq_names = []
+        for spt in split:
+            if spt == 'test':
+                spt = 'test-dev'
+            with open(os.path.join(root, 'ImageSets', str(year),
+                                   spt + '.txt')) as f:
+                seqs_tmp = f.readlines()
+            seqs_tmp = list(map(lambda elem: elem.strip(), seqs_tmp))
+            seq_names.extend(seqs_tmp)
+        self.seqs = list(np.unique(seq_names))
+
+
 class _EVAL_TEST(Dataset):
     def __init__(self, transform, seq_name):
         self.seq_name = seq_name

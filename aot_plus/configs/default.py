@@ -121,6 +121,7 @@ class DefaultEngineConfig():
     def init_dir(self):
         self.DIR_DATA = './datasets'
         self.DIR_DAVIS = os.path.join(self.DIR_DATA, 'DAVIS')
+        self.DIR_LONG_VIDEOS = os.path.join(self.DIR_DATA, 'long_videos')
         self.DIR_VOST = os.path.join(self.DIR_DATA, 'VOST')
         self.DIR_VISOR = os.path.join(self.DIR_DATA, 'VISOR')
         self.DIR_YTB = os.path.join(self.DIR_DATA, 'YTB')
