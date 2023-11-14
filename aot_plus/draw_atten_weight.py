@@ -27,7 +27,7 @@ label_seq_path = os.path.join(label_root, seq_name)
 
 all_image_files = os.listdir(image_seq_path)
 all_image_files.sort()
-img_name = all_image_files[4]
+img_name = all_image_files[20]
 print(f"{img_name = }")
 
 sample_loaded_tensor = torch.load(os.path.join(
@@ -74,17 +74,6 @@ print(f"{h = }  {w = }")
 
 del sample_loaded_tensor
 
-# current_label__ = cv2.imread(os.path.join(
-#     label_seq_path, pathlib.Path(img_name).with_suffix(".png")))
-# current_label__ = cv2.resize(
-#     current_label__, (w, h), fx=0, fy=0, interpolation=cv2.INTER_NEAREST)
-# current_label_bool = np.logical_or.reduce(
-#     current_label__.astype(bool), axis=-1)
-# hs, ws = torch.where(np.logical_or(inner_pred_label > 0, current_label_bool))
-# # hs, ws = torch.where(inner_pred_label > 0)
-# h_w_s = random.sample(list(zip(hs, ws)), k=1)
-
-
 def plot_per_image(point_list, per_layer_image: np.ndarray, attn_values, attn_indices, inner_pred_label, T_num):
     for pos_h, pos_w in point_list:
         print(f"{pos_h = }  {pos_w = }")
@@ -93,25 +82,31 @@ def plot_per_image(point_list, per_layer_image: np.ndarray, attn_values, attn_in
         pred_label_color = [int(c) for c in pred_label_color]
         pred_label_color.reverse()
         start_point = map_indices((pos_w, pos_h), (w, h), (down_w, down_h))
+        start_point = (start_point[0] + down_w * T_num, start_point[1])
         per_layer_image = dot_on_image(
             per_layer_image, start_point, color=pred_label_color)
         target_poses = attn_indices[pos_h, pos_w]
         target_pos_values = attn_values[pos_h, pos_w]
-        # print(f"{target_poses = }   {target_pos_values = }")
+        # print(f"{target_poses = }")
+        # print(f"{target_pos_values = }")
         # most_target_pos = torch.mode(target_pos).values
         target_pos_value_sum = 0
         for target_pos, target_pos_value in zip(target_poses, target_pos_values):
             if target_pos_value_sum > 0.25:
                 # print(f"trunc on {target_pos_value = }")
                 break
-            target_pos_value = target_pos_value.item()
             target_pos_value_sum += target_pos_value
             # if target_pos_value < 0.01:
             #     break
-            target_pos_T, target_pos_h, target_pos_w = np.unravel_index(
-                target_pos, (T_num, h, w))
-            end_point = map_indices(((target_pos_T+1)*w + target_pos_w, target_pos_h), ((
-                T_num+1)*w, h), (per_layer_image.shape[1], per_layer_image.shape[0]))
+            # print(f"{target_pos = }")
+            # print(f"{target_pos_value = }")
+            if len(target_pos) == 3:
+                target_pos_T, target_pos_h, target_pos_w = tuple(target_pos)
+            elif len(target_pos) == 2:
+                target_pos_h, target_pos_w = tuple(target_pos)
+                target_pos_T = 0
+            end_point = map_indices((target_pos_w, target_pos_h), (w, h), (down_w, down_h))
+            end_point = (end_point[0] + target_pos_T * down_w, end_point[1])
             per_layer_image_overlay = per_layer_image.copy()
             per_layer_image_overlay = cv2.line(
                 per_layer_image_overlay, start_point, end_point, color=pred_label_color, thickness=2, lineType=cv2.LINE_AA)
@@ -127,18 +122,18 @@ def draw_point_on_image(point_list, attn_weights, image_list, inner_pred_label, 
     concat_images = []
     for i, (attn_weight, image) in enumerate(zip(attn_weights, image_list)):
         print(f"Layer {i}: ")
-        attn_values = attn_weight["attn_values"]
-        attn_indices = attn_weight["attn_indices"]
         plot_image = plot_per_image(
             point_list,
             image,
-            attn_values.view((h, w, attn_values.size(-1))),
-            attn_indices.view((h, w, attn_indices.size(-1))),
+            attn_weight["attn_values"],
+            attn_weight["attn_indices"],
             inner_pred_label,
             T_num,
         )
         # print(f"{plot_image.shape = }  {plot_image.dtype = }")
         concat_images.append(plot_image)
+    if len(concat_images) < len(image_list):
+        concat_images.extend(image_list[len(concat_images):])
     return concat_images
 
 
@@ -162,39 +157,21 @@ def load_mem_from_file(image_file, is_long=True):
     frame_index = all_image_files.index(image_file)
     if is_long:
         record_T = loaded_tensor["long_mem_len"]
-        test_long_term_mem_gap = loaded_tensor["long_mem_gap"]
-        print(f"{test_long_term_mem_gap = }")
-        memory_img_files = all_image_files[0:test_long_term_mem_gap *
-                                           record_T:test_long_term_mem_gap]
-        memory_img_files.reverse()
-        memory_img_files = [image_file] + memory_img_files
+        memory_indices = loaded_tensor["memory_indices"]
+        print(f"{memory_indices = }")
+        memory_img_files = np.array(all_image_files)[memory_indices]
+        memory_img_files = list(memory_img_files)
+        memory_img_files = memory_img_files + [image_file]
+        # memory_img_files = [all_image_files[0]] + memory_img_files
     else:
         record_T = 1
-        memory_img_files = all_image_files[frame_index:frame_index-2:-1]
+        memory_img_files = all_image_files[frame_index-1:frame_index+1]
     print(f"{record_T = }")
     print(f"{memory_img_files = }")
     inner_pred_label = loaded_tensor["inner_pred_label"]
     print(f"{inner_pred_label.shape = }")
     attn_weight = loaded_tensor["attn_weights"] if is_long else loaded_tensor["short_attn_weights"]
     return memory_img_files, record_T, inner_pred_label, attn_weight
-
-# points = [(random.randint(0, h), random.randint(0, w)) for _ in range(2)]
-# saved_images = draw_point_on_image(
-#     points,
-#     loaded_tensor["attn_weights"],
-#     img_files,
-#     record_T,
-# )
-# print(f"{saved_images.shape = }")
-# cv2.imwrite("test.png", saved_images)
-# saved_short_images = draw_point_on_image(
-#     points,
-#     loaded_tensor["short_attn_weights"],
-#     previous_now_img_file_list,
-#     1,
-# )
-# print(f"{saved_short_images.shape = }")
-# cv2.imwrite("short_image.png", saved_short_images)
 
 
 class ImageScene(QGraphicsScene):
