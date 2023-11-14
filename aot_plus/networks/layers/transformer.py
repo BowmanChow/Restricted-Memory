@@ -521,11 +521,18 @@ class SimplifiedTransformerBlock(nn.Module):
             is_return_attn_weight=save_atten_weights,
         )
         if save_atten_weights:
-            self.record_T = attn.size(-1) // attn.size(-2)
+            bs, head, hw, thw = attn.size()
+            self.record_T = thw // hw
+            attn = attn.view((bs, head, hw, self.record_T, hw))
+            attn = attn.mean(dim=1) # bs, hw, T, hw
+            assert attn.size(0) == 1 # only for evaluation
+            attn = attn.squeeze(0) # hw, T, hw
+            self.record_attn_weight = attn.sum(dim=2)
             self.attn_values, self.attn_indices = \
-                attn.detach().mean(dim=1).topk(32, dim=-1)
+                attn.detach().view((hw, thw)).topk(32, dim=-1)
             self.attn_values, self.attn_indices = \
-                self.attn_values.cpu().squeeze(), self.attn_indices.cpu().squeeze()
+                self.attn_values.cpu().numpy(), self.attn_indices.cpu().numpy()
+            self.attn_indices = np.unravel_index(self.attn_indices, (self.record_T, hw))
 
         if self.linear_q:
             tgt3 = self.short_term_attn(
@@ -541,10 +548,14 @@ class SimplifiedTransformerBlock(nn.Module):
                 is_return_attn_weight=save_atten_weights,
             )
         if save_atten_weights:
+            # bs, head, hw, hw
+            short_attn = short_attn.mean(dim=1) # bs, hw, hw
+            assert short_attn.size(0) == 1 # only for evaluation
+            short_attn = short_attn.squeeze(0) # hw, hw
             self.short_attn_values, self.short_attn_indices = \
-                short_attn.detach().mean(dim=1).topk(32, dim=-1)
+                short_attn.detach().topk(32, dim=-1)
             self.short_attn_values, self.short_attn_indices = \
-                self.short_attn_values.cpu().squeeze(), self.short_attn_indices.cpu().squeeze()
+                self.short_attn_values.cpu().numpy(), self.short_attn_indices.cpu().numpy()
 
         _tgt3 = tgt3
 
