@@ -19,4 +19,9 @@ class EngineConfig(DefaultEngineConfig):
 
         self.TRAIN_AUTO_RESUME = False
         self.PRETRAIN_FULL = True  # if False, load encoder only
-        self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'R50_AOTL_PRE_YTB_DAV.pth')
+        if self.MODEL_VOS == 'aot':
+            self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'R50_AOTL_PRE_YTB_DAV.pth')
+        elif self.MODEL_VOS == 'deaot':
+            self.PRETRAIN_MODEL = os.path.join('pretrain_models', 'R50_DeAOTL_PRE_YTB_DAV.pth')
+        else:
+            raise NotImplementedError
