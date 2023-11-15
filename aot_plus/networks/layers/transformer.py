@@ -4,7 +4,7 @@ from torch import nn
 import torch
 
 from networks.layers.basic import DropPath, GroupNorm1D, GNActDWConv2d, seq_to_2d
-from networks.layers.attention import MultiheadAttention
+from networks.layers.attention import MultiheadAttention, GatedPropagation, LocalGatedPropagation, silu
 from utils.tensor import lbc_2_bchw, bchw_2_lbc
 
 
