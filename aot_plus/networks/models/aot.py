@@ -180,10 +180,12 @@ class AOT(nn.Module):
             self,
             curr_id_emb,
             short_term_mem_skip,
+            size_2d,
             is_update_long_memory,
     ):
         self.LSTT.update_short_memories(
             curr_id_emb=curr_id_emb,
             short_term_mem_skip=short_term_mem_skip,
+            size_2d=size_2d,
             is_update_long_memory=is_update_long_memory,
         )
