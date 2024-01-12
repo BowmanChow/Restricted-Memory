@@ -41,4 +41,4 @@ echo "result_path=$result_path"
 
 model_name=$(python -c "from configs.models.$model import ModelConfig ;print(ModelConfig().MODEL_NAME)")
 cd ../evaluation
-python ./evaluation_method.py --results_path ../aot_plus/${result_path} --dataset_path ${dataset} --re
+python ./evaluation_method.py --results_path "../aot_plus/${result_path}" --dataset_path ${dataset} --re
