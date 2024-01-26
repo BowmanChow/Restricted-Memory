@@ -62,6 +62,30 @@ class Trainer(object):
             print(f"Freeze Model Encoder !")
             for param in self.model_encoder.parameters():
                 param.requires_grad = False
+            for name, param in self.model.named_parameters():
+                self.print_log(f"{name = }  {param.requires_grad = }")
+
+        if cfg.FREEZE_AOT_EXCEPT_TEMPORAL_EMB:
+            print(f"Freeze AOT EXCEPT TEMPORAL EMB!")
+            for param in self.model.parameters():
+                param.requires_grad = False
+            for name, param in self.model.named_parameters():
+                if ("cur_pos_emb" in name) or ("mem_pos_emb" in name):
+                    param.requires_grad = True
+            for name, param in self.model.named_parameters():
+                self.print_log(f"{name = }  {param.requires_grad = }")
+
+        if cfg.FREEZE_AOT_EXCEPT_GRU:
+            print(f"Freeze AOT EXCEPT GRU!")
+            for param in self.model.parameters():
+                param.requires_grad = False
+            for name, module in self.model.named_modules():
+                if "grus" in name:
+                    # print(f"{name = } {module = }")
+                    for param in module.parameters():
+                        param.requires_grad = True
+            for name, param in self.model.named_parameters():
+                print(f"{name = }  {param.requires_grad = }")
 
         if cfg.DIST_ENABLE:
             print(f"Enable Dist !")
