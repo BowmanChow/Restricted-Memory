@@ -12,6 +12,10 @@ class ModelConfig(DefaultModelConfig):
         self.TIME_ENCODE = False
         self.TIME_ENCODE_NORM = self.TIME_ENCODE and True
         time_encode_text = f"_Time_encode{'_norm' if self.TIME_ENCODE_NORM else ''}" if self.TIME_ENCODE else ""
+        self.USE_TEMPORAL_POSITIONAL_EMBEDDING = False
+        self.FREEZE_AOT_EXCEPT_TEMPORAL_EMB = self.USE_TEMPORAL_POSITIONAL_EMBEDDING and False
+        self.TEMPORAL_POSITIONAL_EMBEDDING_SLOT_4 = self.USE_TEMPORAL_POSITIONAL_EMBEDDING and True
+        temporal_pe_text = f"_Temp_pe{'_Freeze' if self.FREEZE_AOT_EXCEPT_TEMPORAL_EMB else ''}{'_Slot_4' if self.TEMPORAL_POSITIONAL_EMBEDDING_SLOT_4 else ''}" if self.USE_TEMPORAL_POSITIONAL_EMBEDDING else ""
         self.USE_MASK = False
         self.NO_LONG_MEMORY = False
         long_mem_text = "_No_long_mem" if self.NO_LONG_MEMORY else ""
@@ -23,6 +27,7 @@ class ModelConfig(DefaultModelConfig):
         self.REVERSE_LOSS = self.REVERSE_LOSS / 4 if self.NO_MEMORY_GAP else self.REVERSE_LOSS
         reverse_infer_text = f"_Reverse_infer_detach_short_loss_{self.REVERSE_LOSS}" if self.REVERSE_INFER else ""
         self.MODEL_NAME = f'R50_DeAOTL{time_encode_text}{long_mem_text}{mem_gap_text}{reverse_infer_text}{gru_memory_text}'
+        self.MODEL_NAME += temporal_pe_text
 
         self.MODEL_ENCODER = 'resnet50'
         self.MODEL_ENCODER_PRETRAIN = './pretrain_models/resnet50-0676ba61.pth'  # https://download.pytorch.org/models/resnet50-0676ba61.pth

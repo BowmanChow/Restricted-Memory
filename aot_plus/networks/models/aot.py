@@ -6,6 +6,7 @@ from networks.layers.transformer import LongShortTermTransformer
 from networks.decoders import build_decoder
 from networks.layers.position import PositionEmbeddingSine
 from utils.tensor import bchw_2_lbc
+from timm.models.layers import trunc_normal_
 
 
 class AOT(nn.Module):
@@ -90,6 +91,18 @@ class AOT(nn.Module):
         self._init_weight()
 
         self.__var_losses = []
+
+        self.use_temporal_pe = cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING
+        if self.cfg.USE_TEMPORAL_POSITIONAL_EMBEDDING:
+            self.cur_pos_emb = nn.Parameter(torch.randn(1, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.05)
+            if self.cfg.TEMPORAL_POSITIONAL_EMBEDDING_SLOT_4:
+                self.mem_pos_emb = nn.Parameter(torch.randn(4, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.05)
+            else:
+                self.mem_pos_emb = nn.Parameter(torch.randn(2, cfg.MODEL_ENCODER_EMBEDDING_DIM) * 0.05)
+            trunc_normal_(self.cur_pos_emb, std=.05)
+            trunc_normal_(self.mem_pos_emb, std=.05)
+        else:
+            self.temporal_encoding = None
 
     def get_pos_emb(self, x):
         pos_emb = self.pos_generator(x)
