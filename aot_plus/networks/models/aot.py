@@ -158,7 +158,7 @@ class AOT(nn.Module):
             curr_emb,
             curr_id_emb,
             pos_emb,
-            size_2d,
+            size_2d=size_2d,
             temporal_encoding=temporal_encoding,
             is_outer_memory=is_outer_memory,
             outer_long_memories=outer_long_memories,
