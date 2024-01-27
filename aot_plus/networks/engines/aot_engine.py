@@ -341,6 +341,7 @@ class AOTEngine(nn.Module):
         self.AOT.update_short_term_memory(
             curr_id_emb=curr_id_emb,
             short_term_mem_skip=self.short_term_mem_skip,
+            size_2d=self.enc_size_2d,
             is_update_long_memory=is_update_long_memory,
         )
         if is_update_long_memory:
