@@ -83,6 +83,9 @@ def main():
     parser.add_argument('--fix_random', action='store_true')
     parser.set_defaults(fix_random=False)
 
+    parser.add_argument('--former_mem_len', type=int, default=1)
+    parser.add_argument('--latter_mem_len', type=int, default=9999)
+
     args = parser.parse_args()
 
     sys.path.append(f"{args.result_path}/")
@@ -117,6 +120,9 @@ def main():
     setattr(cfg, "EVAL_NAME", args.eval_name)
     setattr(cfg, "DEBUG_FIX_RANDOM", args.debug_fix_random)
     setattr(cfg, "FIX_RANDOM", args.fix_random)
+
+    cfg.FORMER_MEM_LEN = args.former_mem_len
+    cfg.LATTER_MEM_LEN = args.latter_mem_len
 
     if args.gpu_num > 1:
         mp.set_start_method('spawn')

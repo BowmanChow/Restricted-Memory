@@ -32,6 +32,7 @@ eval_name="debug"
 CUDA_VISIBLE_DEVICES=${devices} python tools/eval.py --result_path "${result_path}" \
 	--dataset ${dataset} --split ${split} --gpu_num ${gpu_num} --ms 1.0 \
 	--eval_name ${eval_name} \
+	--latter_mem_len 999 \
 	--fix_random \
 	# --debug_fix_random
 
