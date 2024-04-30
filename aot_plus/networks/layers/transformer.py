@@ -311,6 +311,8 @@ class LongShortTermTransformer(nn.Module):
         former_memory_len,
         latter_memory_len,
         use_atten_weight=False,
+        long_memories_indexes=[],
+        foreground_proba : torch.Tensor=None,
     ):
         to_drop_idx = former_memory_len
         if self.gru_memory:
@@ -319,10 +321,66 @@ class LongShortTermTransformer(nn.Module):
             attn_weight = torch.stack([
                 self.layers[0].record_attn_weight,
                 self.layers[0].record_attn_weight,
-                self.layers[1].record_attn_weight,
-                self.layers[2].record_attn_weight,
+                # self.layers[1].record_attn_weight,
+                # self.layers[2].record_attn_weight,
             ]).mean(dim=0)
+            if foreground_proba is not None:
+                foreground_proba = foreground_proba.squeeze().flatten().unsqueeze(-1)
+                print(f"{foreground_proba.size() = }")
+                attn_weight = attn_weight * foreground_proba
+            attn_weight = attn_weight.sum(dim=0)
+            attn_weight = attn_weight / attn_weight.sum()
             attn_weight = attn_weight.cpu()
+            print(f"{attn_weight = }")
+
+            # moving mean
+            attn_weight_dict = {
+                long_memories_indexes[i]: attn
+                for i, attn in enumerate(attn_weight)
+            }
+            # print(f"{attn_weight_dict = }")
+            last_attn_weight_dict = self.stored_attn_weight_dict
+            moving_mean_factor = 0.8
+            print(f"{moving_mean_factor = } x {last_attn_weight_dict = }")
+            attn_weight_dict = {
+                frame_idx:
+                    (1-moving_mean_factor)*last_attn_weight_dict[frame_idx] + moving_mean_factor*attn
+                    if frame_idx in last_attn_weight_dict else attn
+                for frame_idx, attn in attn_weight_dict.items()
+            }
+            # print(f"{attn_weight_dict = }")
+            self.stored_attn_weight_dict = attn_weight_dict
+            for i, _ in enumerate(attn_weight):
+                attn_weight[i] = attn_weight_dict[long_memories_indexes[i]]
+            print(f"{attn_weight = }")
+
+            # UCB
+            frame_times = {
+                mem_idx: 1
+                for mem_idx in long_memories_indexes
+            }
+            # print(f"{self.stored_frame_times = }")
+            frame_times = {
+                mem_idx: (time + self.stored_frame_times[mem_idx]) if mem_idx in self.stored_frame_times else time
+                for mem_idx, time in frame_times.items()
+            }
+            # print(f"{frame_times = }")
+            self.stored_frame_times = frame_times
+            frame_times_np = torch.Tensor([
+                frame_times[mem_idx]
+                for mem_idx in long_memories_indexes[:-1]
+            ])
+            print(f"{frame_times_np = }")
+            frame_times_np[0] = len(frame_times_np)
+            if (self.gru_memory) and len(frame_times_np) > 1:
+                frame_times_np[1] = len(frame_times_np)
+            add_item = 8
+            mul_item = 1.5
+            frame_times_param = mul_item * torch.sqrt(torch.log(frame_times_np.sum()) / (frame_times_np + add_item))
+            print(f"{frame_times_param = }  +  {add_item = }  *  {mul_item = }")
+            attn_weight = attn_weight + frame_times_param
+            print(f"{attn_weight = }")
+
             # print(f"{attn_weight = }")
             ignore_former_size = 1
             if self.gru_memory:
@@ -331,12 +389,14 @@ class LongShortTermTransformer(nn.Module):
             if attn_weight_remove_0.size(0) > 0:
                 to_drop_idx = torch.argmin(attn_weight_remove_0).item()
                 to_drop_idx += ignore_former_size
-        # print(f"{to_drop_idx = }")
+        print(f"{to_drop_idx = }")
+        is_drop = False
         for layer_idx in range(len(self.layers)):
             memory_k_v = self.long_term_memories[layer_idx]
             for i in range(len(memory_k_v)):
                 mem = memory_k_v[i]
                 if mem.size(0) > (former_memory_len + latter_memory_len):
+                    is_drop = True
                     if self.gru_memory:
                         gru = self.layers[layer_idx].memory_grus[i]
                         # gru = mean_gru
@@ -352,11 +412,15 @@ class LongShortTermTransformer(nn.Module):
                         new_mem = torch.cat(
                             [mem[0:to_drop_idx, ...], mem[to_drop_idx+1:, ...]], dim=0)
                     self.long_term_memories[layer_idx][i] = new_mem
+        if is_drop:
+            long_memories_indexes.remove(long_memories_indexes[to_drop_idx])
 
     def init_memory(self, size_2d=(30, 30)):
         self.long_term_memories = self.lstt_long_memories
         self.short_term_memories_list = [self.lstt_short_memories]
         self.short_term_memories = self.lstt_short_memories
+        self.stored_attn_weight_dict = {}
+        self.stored_frame_times = {}
         if self.gru_memory:
             l, b, c = self.short_term_memories[0][0].size()
             dtype = self.short_term_memories[0][0].dtype
